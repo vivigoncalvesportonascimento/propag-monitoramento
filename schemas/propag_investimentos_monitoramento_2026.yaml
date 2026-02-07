@@ -1,0 +1,57 @@
+  fields:
+    - name: uo_cod
+      type: integer
+    - name: uo_sigla
+      type: string
+    - name: acao_cod
+      type: integer
+    - name: acao_desc
+      type: string
+    - name: intervencao_cod
+      type: integer
+    - name: intervencao_desc
+      type: string
+    - name: marcos_principais
+      type: string
+    - name: novo_marco
+      type: string
+    - name: valor_previsto_total
+      type: string
+    - name: valor_replanejado_total
+      type: number
+    - name: 1_bimestre_planejado
+      type: boolean
+    - name: 1_bimestre_replanejado
+      type: number
+    - name: 1_bimestre_realizado
+      type: number
+    - name: 2_bimestre_planejado
+      type: boolean
+    - name: 2_bimestre_replanejado
+      type: number
+    - name: 2_bimestre_realizado
+      type: number
+    - name: 3_bimestre_planejado
+      type: boolean
+    - name: 3_bimestre_replanejado
+      type: number
+    - name: 3_bimestre_realizado
+      type: number
+    - name: 4_bimestre_planejado
+      type: boolean
+    - name: 4_bimestre_replanejado
+      type: number
+    - name: 4_bimestre_realizado
+      type: number
+    - name: 5_bimestre_planejado
+      type: boolean
+    - name: 5_bimestre_replanejado
+      type: number
+    - name: 5_bimestre_realizado
+      type: number
+    - name: 6_bimestre_planejado
+      type: boolean
+    - name: 6_bimestre_replanejado
+      type: number
+    - name: 6_bimestre_realizado
+      type: number

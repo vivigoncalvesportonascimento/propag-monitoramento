@@ -28,3 +28,13 @@
     encoding: utf-8
     dialect: dialect.yaml
     schema: schemas/propag_investimentos_limite_2026.yaml
+
+  - name: propag_investimentos_monitoramento_2026
+    type: table
+    path: data-raw/propag_investimentos_monitoramento_2026.csv
+    scheme: file
+    format: csv
+    mediatype: text/csv
+    encoding: cp1252
+    dialect: dialect.yaml
+    schema: schemas/propag_investimentos_monitoramento_2026.yaml
