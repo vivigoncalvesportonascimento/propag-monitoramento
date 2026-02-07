@@ -1,0 +1,30 @@
+﻿resources:
+  - name: propag_intervencoes_substituicao_acordo_fte80_2026
+    type: table
+    path: .\data-raw\propag_intervencoes_substituicao_acordo_fte80_2026.csv
+    scheme: file
+    format: csv
+    mediatype: text/csv
+    encoding: iso8859-1
+    dialect: dialect.yaml
+    schema: schemas/propag_substituicao_fte80.yaml
+
+  - name: propag_investimentos_intervencoes_plano_2026
+    type: table
+    path: .\data-raw\propag_investimentos_intervencoes_plano_2026.csv
+    scheme: file
+    format: csv
+    mediatype: text/csv
+    encoding: cp1252
+    dialect: dialect.yaml
+    schema: schemas/propag_intervencoes_2026.yaml
+
+  - name: propag_investimentos_limite_2026
+    type: table
+    path: .\data-raw\propag_investimentos_limite_2026.csv
+    scheme: file
+    format: csv
+    mediatype: text/csv
+    encoding: utf-8
+    dialect: dialect.yaml
+    schema: schemas/propag_investimentos_limite_2026.yaml

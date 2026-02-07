@@ -1,0 +1,74 @@
+[project]
+name = 'painel-propag'
+version = '0.1.0'
+description = ''
+authors = [
+    {name = 'Viviane Nascimento',email = 'vivigoncalvesporto@gmail.com'}
+]
+readme = 'README.md'
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    'taskipy (>=1.14.1,<2.0.0)',
+    "python-dotenv (>=1.2.1,<2.0.0)",
+    "dpm @ git+https://github.com/splor-mg/dpm.git@main",
+    "streamlit (>=1.53.1,<2.0.0)",
+    "plotly (>=6.5.2,<7.0.0)",
+    "openpyxl (>=3.1.5,<4.0.0)",
+    "pyarrow (>=23.0.0,<24.0.0)",
+    "fastparquet (>=2025.12.0,<2026.0.0)"
+]
+
+
+[build-system]
+requires = ['poetry-core>=2.0.0,<3.0.0']
+build-backend = 'poetry.core.masonry.api'
+[dependency-groups]
+dev = [
+    'ipdb (>=0.13.13,<0.14.0)',
+    'pytest (>=9.0.2,<10.0.0)',
+    'pytest-cov (>=7.0.0,<8.0.0)',
+    'ruff (>=0.14.10,<0.15.0)'
+]
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[tool.pytest.ini_options]
+pythonpath = '.'
+addopts = '-p no:warnings'
+
+[tool.poetry]
+package-mode = true
+
+
+[[tool.poetry.packages]]
+include = "my_pkg"
+
+[project.scripts]
+build-tbl-limite-liquidado = "my_pkg.transform.build_tbl_limite_vs_liquidado:main"
+build-tbl-pg1-tb2         = "my_pkg.transform.build_tbl_pagina1_tabela2:main"
+build-pg2-intervencao     = "my_pkg.transform.build_pagina2_intervencao:main"
+
+
+# --- iniciar os comandos com poetry run ---
+[tool.taskipy.tasks]
+list = { cmd = 'task --list', help = 'Lists all tasks.' }
+lint = { cmd = 'ruff check', help = 'Checks for good coding practices in Python.' }
+pre_format = { cmd = 'ruff check --fix', help = 'Makes some best practice corrections.' }
+format = { cmd = 'ruff format', help = 'Formats code according to code style conventions.' }
+pre_test = { cmd = 'task lint', help = 'Runs linters before running the tests.' }
+test = { cmd = 'pytest -s -x -vv', help = 'Runs unit tests.' }
+post_test = { cmd = 'coverage html', help = 'Generates a coverage report after the tests.' }
+extract = { cmd = 'poetry run dpm install', help = 'Extrai recursos dos datapackages listados no arquivo data.toml.' }
+transform = { cmd = 'python my_pkg/transform/etl.py', help = 'Processa os dados brutos e gera as tabelas finais na pasta processed_data.' }
+dashboard = { cmd = 'streamlit run streamlit/app.py', help = 'Inicia o painel de monitoramento no navegador.' }
+update = { cmd = 'task extract && task transform', help = 'Roda a extração (dpm) e a transformação (etl) em sequência.' }
+
