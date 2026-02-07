@@ -8,6 +8,3 @@ font = "sans serif"
 
 [server]
 runOnSave = true
-
-[layout]
-wideMode = true
