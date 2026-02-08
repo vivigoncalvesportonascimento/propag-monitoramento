@@ -2,7 +2,7 @@
 import time
 import pandas as pd
 import streamlit as st
-from st_gsheets_connection import GSheetsConnection
+from streamlit_gsheets import GSheetsConnection
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
@@ -91,8 +91,8 @@ credentials = st.secrets.get("auth", {}).get("credentials", {})
 auth = stauth.Authenticate(
     credentials=credentials,
     cookie_name=auth_cfg.get("cookie_name", "propag_monitoramento"),
-    key=auth_cfg.get("cookie_key", "chave-secreta"),
-    cookie_expiry_days=int(auth_cfg.get("cookie_expiry_days", 3)),
+    cookie_key=auth_cfg.get("cookie_key", "chave-secreta"), # <--- Mudou para 'cookie_key'
+    cookie_expiry_days=int(auth_cfg.get("cookie_expiry_days", 1)),
 )
 
 st.sidebar.title("Acesso")
