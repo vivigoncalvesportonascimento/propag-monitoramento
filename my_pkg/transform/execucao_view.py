@@ -2,119 +2,175 @@
 # -*- coding: utf-8 -*-
 """
 Carrega a tabela de execução (fato) e incorpora dimensões (uo, ação e elemento_item),
-aplicando o filtro global do painel:
-    (fonte_cod = 89 OR ipu_cod = 0) AND uo_cod != 1261
+aplicando o filtro global do painel.
 
-Entrega apenas as colunas solicitadas para a visualização do Streamlit.
+SOLUÇÃO DE VÍNCULO:
+Realiza a padronização de tipos (Int64) nas chaves de junção (ano + cod)
+para garantir que as descrições (sigla, desc) sejam trazidas corretamente.
 """
 
 from __future__ import annotations
 import pandas as pd
 from functools import lru_cache
 
-# Colunas de saída na ordem desejada (como você especificou)
+# Lista completa de colunas de saída
 EXEC_VIEW_COLS = [
+    # Chaves
     "ano",
-    "mes_cod",
     "uo_cod",
-    "uo_sigla",
     "acao_cod",
+    "elemento_item_cod",
+    
+    # Descrições (vindas das tabelas auxiliares)
+    "uo_sigla",
     "acao_desc",
+    "elemento_item_desc",
+    
+    # Classificadores da Execução
     "grupo_cod",
     "fonte_cod",
     "ipu_cod",
-    "elemento_item_cod",
-    "elemento_item_desc",
+    
+    # Detalhes Operacionais
     "cnpj_cpf_formatado",
     "num_contrato_saida",
     "num_obra",
     "num_empenho",
+    
+    # Métricas
     "vlr_empenhado",
     "vlr_liquidado",
-    "vlr_liquidado_retido",
     "vlr_pago_orcamentario",
 ]
 
-# Arquivos (instalados via dpm / datapackage)
+# Caminhos dos arquivos (datapackages)
 PATH_EXEC = "datapackages/siafi-2026/data/execucao.csv.gz"
-PATH_UO = "datapackages/aux-classificadores/data/uo.csv"
+PATH_UO   = "datapackages/aux-classificadores/data/uo.csv"
 PATH_ACAO = "datapackages/aux-classificadores/data/acao.csv"
-PATH_ELI = "datapackages/aux-classificadores/data/elemento_item.csv"
+PATH_ELI  = "datapackages/aux-classificadores/data/elemento_item.csv"
+
+
+def _ensure_join_types(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """
+    Converte as colunas especificadas para Int64 (inteiro que aceita nulo).
+    Isso é CRUCIAL para o merge funcionar entre tabelas diferentes.
+    """
+    for col in cols:
+        if col in df.columns:
+            # Primeiro converte para numeric (trata erros como NaN), depois para Int64
+            df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
+    return df
 
 
 @lru_cache(maxsize=2)
 def _load_execucao_raw() -> pd.DataFrame:
-    """Lê a execução com dtype automático e baixa memória."""
+    """Lê a execução bruta."""
     df = pd.read_csv(PATH_EXEC, compression="gzip", low_memory=False)
     return df
 
 
 @lru_cache(maxsize=4)
 def _load_dim_uo() -> pd.DataFrame:
-    """Lê dimensão UO e deixa só o necessário para o join."""
-    uo = pd.read_csv(PATH_UO, low_memory=False)
-    uo = uo[["ano", "uo_cod", "uo_sigla"]].drop_duplicates()
-    return uo
+    """Lê dimensão UO e padroniza chaves."""
+    df = pd.read_csv(PATH_UO, low_memory=False)
+    # Seleciona colunas e remove duplicatas de chave
+    df = df[["ano", "uo_cod", "uo_sigla"]].drop_duplicates(subset=["ano", "uo_cod"])
+    # Padroniza chaves
+    df = _ensure_join_types(df, ["ano", "uo_cod"])
+    return df
 
 
 @lru_cache(maxsize=4)
 def _load_dim_acao() -> pd.DataFrame:
-    """Lê dimensão Ação e deixa só o necessário para o join."""
-    ac = pd.read_csv(PATH_ACAO, low_memory=False)
-    ac = ac[["ano", "acao_cod", "acao_desc"]].drop_duplicates()
-    return ac
+    """Lê dimensão Ação e padroniza chaves."""
+    df = pd.read_csv(PATH_ACAO, low_memory=False)
+    df = df[["ano", "acao_cod", "acao_desc"]].drop_duplicates(subset=["ano", "acao_cod"])
+    df = _ensure_join_types(df, ["ano", "acao_cod"])
+    return df
 
 
 @lru_cache(maxsize=4)
 def _load_dim_elemento_item() -> pd.DataFrame:
-    """Lê dimensão Elemento Item e deixa só o necessário para o join."""
-    eli = pd.read_csv(PATH_ELI, low_memory=False)
-    eli = eli[["ano", "elemento_item_cod", "elemento_item_desc"]].drop_duplicates()
-    return eli
+    """Lê dimensão Elemento Item e padroniza chaves."""
+    df = pd.read_csv(PATH_ELI, low_memory=False)
+    df = df[["ano", "elemento_item_cod", "elemento_item_desc"]].drop_duplicates(subset=["ano", "elemento_item_cod"])
+    df = _ensure_join_types(df, ["ano", "elemento_item_cod"])
+    return df
 
 
 def _apply_global_filter(df: pd.DataFrame) -> pd.DataFrame:
     """(fonte_cod = 89 OR ipu_cod = 0) AND uo_cod != 1261"""
-    return df.loc[
-        ((df["fonte_cod"] == 89) | (df["ipu_cod"] == 0)) & (df["uo_cod"] != 1261)
-    ].copy()
+    # Garante numérico para filtrar
+    for c in ["fonte_cod", "ipu_cod", "uo_cod"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+    
+    mask = (
+        ((df["fonte_cod"] == 89) | (df["ipu_cod"] == 0)) 
+        & (df["uo_cod"] != 1261)
+    )
+    return df.loc[mask].copy()
 
 
 def load_execucao_view(restrict_uo: int | None = None) -> pd.DataFrame:
     """
-    Retorna a visão de execução com dimensões e já filtrada pelo critério global.
-    Se `restrict_uo` for informado, restringe também a essa UO (útil para usuários não-admin).
+    Gera a tabela completa (Fato + Dimensões) com joins seguros.
     """
+    # 1. Carrega Fato
     df = _load_execucao_raw()
     df = _apply_global_filter(df)
 
-    # Opcional: restringe por UO do usuário (RLS adicional)
+    # 2. Padroniza chaves na Fato ANTES do join
+    # Isso garante que 1021.0 vire 1021 (Int64)
+    join_keys = ["ano", "uo_cod", "acao_cod", "elemento_item_cod"]
+    df = _ensure_join_types(df, join_keys)
+
+    # 3. Restrição de segurança (RLS)
     if restrict_uo is not None:
         df = df.loc[df["uo_cod"] == int(restrict_uo)].copy()
 
-    # JOINs com dimensões (sempre por ano + código)
-    uo = _load_dim_uo()
-    df = df.merge(uo, on=["ano", "uo_cod"], how="left")
+    # 4. Carrega Dimensões (já padronizadas dentro das funções _load)
+    dim_uo = _load_dim_uo()
+    dim_acao = _load_dim_acao()
+    dim_eli = _load_dim_elemento_item()
 
-    ac = _load_dim_acao()
-    df = df.merge(ac, on=["ano", "acao_cod"], how="left")
+    # 5. Executa os Joins (Left Join)
+    # Apenas registros que tem match de (ano + codigo) trarão a descrição
+    df = df.merge(dim_uo, on=["ano", "uo_cod"], how="left")
+    df = df.merge(dim_acao, on=["ano", "acao_cod"], how="left")
+    df = df.merge(dim_eli, on=["ano", "elemento_item_cod"], how="left")
 
-    eli = _load_dim_elemento_item()
-    df = df.merge(eli, on=["ano", "elemento_item_cod"], how="left")
+    # 6. Preenchimento de Falhas (Opcional mas recomendado)
+    # Se não achar a descrição, preenche para não ficar vazio na tabela
+    if "uo_sigla" in df.columns:
+        df["uo_sigla"] = df["uo_sigla"].fillna("UO-" + df["uo_cod"].astype(str))
+    if "acao_desc" in df.columns:
+        df["acao_desc"] = df["acao_desc"].fillna("Ação " + df["acao_cod"].astype(str))
 
-    # Seleção/ordem final de colunas
-    keep = [c for c in EXEC_VIEW_COLS if c in df.columns]
-    out = df[keep].copy()
+    # 7. Tratamento Final de Tipos
+    
+    # Métricas -> Float
+    metric_cols = ["vlr_empenhado", "vlr_liquidado", "vlr_pago_orcamentario"]
+    for col in metric_cols:
+        if col not in df.columns:
+            df[col] = 0.0
+        else:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
 
-    # Tipos numéricos garantidos
-    for col in ["vlr_empenhado", "vlr_liquidado", "vlr_liquidado_retido", "vlr_pago_orcamentario"]:
-        if col in out.columns:
-            out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0.0)
+    # Dimensões de Texto -> String
+    text_dims = [
+        "cnpj_cpf_formatado", "num_contrato_saida", "num_obra", "num_empenho", 
+        "uo_sigla", "acao_desc", "elemento_item_desc"
+    ]
+    for col in text_dims:
+        if col in df.columns:
+            df[col] = df[col].astype(str).replace("nan", "").replace("<NA>", "")
 
-    # Inteiros que às vezes vêm como floats
-    for col in ["mes_cod", "uo_cod", "acao_cod", "grupo_cod", "fonte_cod", "ipu_cod",
-                "elemento_item_cod", "num_contrato_saida", "num_obra", "num_empenho"]:
-        if col in out.columns:
-            out[col] = pd.to_numeric(out[col], errors="coerce").astype("Int64")
+    # Outros Códigos -> Int64
+    other_ints = ["grupo_cod", "fonte_cod", "ipu_cod"]
+    df = _ensure_join_types(df, other_ints)
 
-    return out
+    # Seleção Final
+    final_cols = [c for c in EXEC_VIEW_COLS if c in df.columns]
+    
+    return df[final_cols].copy()
