@@ -8,9 +8,11 @@ Este app:
 - Lê/atualiza dados de planejamento via Google Sheets (st-gsheets-connection).
 - Mostra métricas do topo (limite do plano / liquidado / saldo).
 - Exibe e permite editar uma tabela (cronograma) com validações.
-- Adiciona uma visão de Execução do Exercício (fato) + dimensões (UO, Ação, Elemento Item),
-  com filtro global: (fonte = 89 OU ipu = 0) e uo_cod != 1261 (exclui SEE),
-  além de menu dinâmico de filtros para análise detalhada.
+- Seção "Execução do exercício":
+    (a) Filtros de linhas (opcionais) para recortar o dataset;
+    (b) Tabela dinâmica (tipo pivot) em que você escolhe Dimensões e Medidas, e o app
+        retorna exatamente as colunas selecionadas, somando as medidas por grupo.
+  Regra global SEMPRE aplicada na Execução: (fonte = 89 OU ipu = 0) e uo_cod != 1261 (exclui SEE).
 
 Requisitos:
 - .streamlit/secrets.toml com blocos 'auth', 'rbac' e 'connections.gsheets'.
@@ -42,18 +44,18 @@ from my_pkg.transform.schema import (
     REQUIRED_ON_NEW,
 )
 
-# -----------------------------------------------------------------------------
+# =============================================================================
 # Configuração da página
-# -----------------------------------------------------------------------------
+# =============================================================================
 st.set_page_config(
     page_title="Propag - Monitoramento do Plano de Aplicação de Investimentos",
     page_icon="📊",
     layout="wide",
 )
 
-# -----------------------------------------------------------------------------
+# =============================================================================
 # Utilidades
-# -----------------------------------------------------------------------------
+# =============================================================================
 def brl(value: float) -> str:
     """Formata número como moeda pt-BR (uso rápido)."""
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -114,7 +116,7 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if data[col].dtype != bool:
             data[col] = data[col].astype(str).str.upper().isin(["TRUE", "1", "SIM"])
 
-    return data[ALL_COLS]  # conforme schema.py do seu projeto
+    return data[ALL_COLS]
 
 def validate_new_rows(
     df_before: pd.DataFrame,
@@ -129,7 +131,6 @@ def validate_new_rows(
 
     Retorna: (is_valid, msg, df_after_possivelmente_ajustado)
     """
-    # Identifica novas linhas por chave composta (uo_cod, acao_cod, intervencao_cod, marcos_principais)
     before_idx = set(
         map(
             tuple,
@@ -194,14 +195,14 @@ def validate_new_rows(
 
     return True, "", df_after
 
-# -----------------------------------------------------------------------------
+# =============================================================================
 # Autenticação (deep copy dos segredos + nova assinatura login/logout)
-# -----------------------------------------------------------------------------
+# =============================================================================
 auth_cfg_raw = st.secrets.get("auth", {})
 credentials_raw = auth_cfg_raw.get("credentials", {})
 
-auth_cfg = _to_plain_dict(auth_cfg_raw)       # <- agora é dict mutável
-credentials = _to_plain_dict(credentials_raw) # <- agora é dict mutável
+auth_cfg = _to_plain_dict(auth_cfg_raw)       # dict mutável
+credentials = _to_plain_dict(credentials_raw) # dict mutável
 
 if "usernames" not in credentials or not isinstance(credentials["usernames"], dict):
     st.error(
@@ -213,17 +214,14 @@ if "usernames" not in credentials or not isinstance(credentials["usernames"], di
 auth = stauth.Authenticate(
     credentials=credentials,
     cookie_name=auth_cfg.get("cookie_name", "propag_monitoramento"),
-    cookie_key=auth_cfg.get("cookie_key", "chave-secreta"),  # nome correto no pacote
+    cookie_key=auth_cfg.get("cookie_key", "chave-secreta"),
     cookie_expiry_days=int(auth_cfg.get("cookie_expiry_days", 1)),
 )
 
 st.sidebar.title("Acesso")
 
-# A partir da v0.3.1+, o 1º argumento é 'location' e o nome do form vai em 'fields'
-login_result = auth.login(
-    location="sidebar",
-    fields={"Form name": "Entrar"}
-)
+# Nova assinatura: 1º parâmetro = location; título do form via fields
+login_result = auth.login(location="sidebar", fields={"Form name": "Entrar"})
 # Em algumas versões a função retorna a tupla; em outras popula st.session_state
 if isinstance(login_result, tuple):
     name, auth_status, username = login_result
@@ -237,12 +235,8 @@ if not auth_status:
         st.sidebar.error("Usuário ou senha inválidos.")
     st.stop()
 
-# Use uma key única para evitar 'StreamlitDuplicateElementKey'
-auth.logout(
-    button_name="Sair",
-    location="sidebar",
-    key="logout_sidebar"
-)
+# Logout com key única para evitar colisão
+auth.logout(button_name="Sair", location="sidebar", key="logout_sidebar")
 st.sidebar.success(f"Olá, {name}!")
 
 # RBAC (secrets + opcional YAML)
@@ -271,9 +265,9 @@ else:
     else:
         working_uo = st.sidebar.selectbox("UO de trabalho", sorted(allowed_uos))
 
-# -----------------------------------------------------------------------------
+# =============================================================================
 # Métricas do topo
-# -----------------------------------------------------------------------------
+# =============================================================================
 try:
     vlr_plano, vlr_liq, saldo = load_metrics()
 except Exception as e:
@@ -291,9 +285,9 @@ with c3:
 
 st.divider()
 
-# -----------------------------------------------------------------------------
-# Google Sheets - leitura
-# -----------------------------------------------------------------------------
+# =============================================================================
+# Google Sheets - leitura (tabela editável do planejamento)
+# =============================================================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 ss = st.secrets.get("connections", {}).get("gsheets", {})
@@ -441,9 +435,8 @@ if st.button("💾 Salvar alterações no Google Sheets", type="primary"):
         st.error(f"Erro ao salvar no Google Sheets: {e}")
 
 # =============================================================================
-# NOVA SEÇÃO: Execução orçamentária do exercício (detalhe)
+# Seção: Execução orçamentária do exercício (detalhe)
 # =============================================================================
-
 st.divider()
 st.subheader("Execução orçamentária do exercício (detalhe)")
 
@@ -453,7 +446,7 @@ PATH_UO = "datapackages/aux-classificadores/data/uo.csv"
 PATH_ACAO = "datapackages/aux-classificadores/data/acao.csv"
 PATH_ELI = "datapackages/aux-classificadores/data/elemento_item.csv"
 
-# ---- Colunas finais solicitadas --------------------------------------------
+# ---- Colunas finais disponíveis --------------------------------------------
 EXEC_VIEW_COLS = [
     "ano",
     "mes_cod",
@@ -541,11 +534,13 @@ def load_execucao_view(restrict_uo: int | None = None) -> pd.DataFrame:
 
     return out
 
-# ---- Filtros do visual ------------------------------------------------------
+# -----------------------------------------------------------------------------
+# (1) Filtros de linhas (opcional) - recorte do dataset base
+# -----------------------------------------------------------------------------
 restrict_uo = None if is_admin else int(working_uo)
 exec_df = load_execucao_view(restrict_uo=restrict_uo)
 
-with st.expander("Filtros (menu dinâmico)"):
+with st.expander("Filtros de linhas (opcional)"):
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -583,6 +578,7 @@ with st.expander("Filtros (menu dinâmico)"):
         num_obra = st.text_input("Nº obra (contém)").strip()
         num_empenho = st.text_input("Nº empenho (contém)").strip()
 
+# Aplica filtros de linhas (opcionais)
 mask = (
     exec_df["ano"].isin(ano_sel)
     & exec_df["mes_cod"].isin(mes_sel)
@@ -594,60 +590,142 @@ mask = (
     & exec_df["ipu_cod"].isin(ipu_sel)
     & exec_df["elemento_item_desc"].isin(eli_sel)
 )
-df_detalhe = exec_df.loc[mask].copy()
+df_base = exec_df.loc[mask].copy()
 
 def _contains(series: pd.Series, token: str) -> pd.Series:
-    """Filtro textual 'contém' (case-insensitive)."""
     if not token:
         return pd.Series([True] * len(series), index=series.index)
     return series.astype(str).str.contains(token, case=False, na=False)
 
-# Filtros textuais
-if "cnpj_cpf_formatado" in df_detalhe.columns:
-    df_detalhe = df_detalhe[_contains(df_detalhe["cnpj_cpf_formatado"], cnpj_cpfs)]
+# Filtros textuais (opcionais)
+if "cnpj_cpf_formatado" in df_base.columns:
+    df_base = df_base[_contains(df_base["cnpj_cpf_formatado"], cnpj_cpfs)]
 for col, token in [
     ("num_contrato_saida", num_contrato),
     ("num_obra", num_obra),
     ("num_empenho", num_empenho),
 ]:
-    if col in df_detalhe.columns:
-        df_detalhe = df_detalhe[_contains(df_detalhe[col], token)]
+    if col in df_base.columns:
+        df_base = df_base[_contains(df_base[col], token)]
 
 st.caption(
     "Filtro global aplicado: **(fonte = 89 OU ipu = 0) e uo_cod ≠ 1261 (exclui SEE)** · "
     + ("visão de todas as UOs" if is_admin else f"UO de trabalho: {working_uo}")
 )
 
-use_brl_format = st.checkbox("Exibir valores no formato brasileiro (R$ 1.234,56)", value=True)
+# -----------------------------------------------------------------------------
+# (2) Tabela dinâmica - seleção de variáveis (Dimensões/Medidas)
+# -----------------------------------------------------------------------------
+st.subheader("Tabela dinâmica (seleção de variáveis)")
 
-display_cols = [c for c in EXEC_VIEW_COLS if c in df_detalhe.columns]
-df_show = df_detalhe[display_cols].copy()
+# Dicionários 'rótulo -> coluna' (dimensões e medidas)
+# Dicionários 'rótulo -> coluna' (dimensões e medidas) — ATUALIZADOS
+DIM_OPTIONS = {
+    # Fato (execucao.csv.gz)
+    "Ano": "ano",
+    "Mês (cód.)": "mes_cod",
+    "UO (cód.)": "uo_cod",
+    "Ação (cód.)": "acao_cod",
+    "Grupo Despesa (cód.)": "grupo_cod",
+    "Fonte (cód.)": "fonte_cod",
+    "IPU (cód.)": "ipu_cod",
+    "Elemento item (cód.)": "elemento_item_cod",
+    "CNPJ/CPF (formatado)": "cnpj_cpf_formatado",
+    "Nº contrato saída": "num_contrato_saida",
+    "Nº obra": "num_obra",
+    "Nº empenho": "num_empenho",
 
-num_config = {
-    "vlr_empenhado": st.column_config.NumberColumn(label="Empenhado", format="R$ %,.2f"),
-    "vlr_liquidado": st.column_config.NumberColumn(label="Liquidado", format="R$ %,.2f"),
-    "vlr_liquidado_retido": st.column_config.NumberColumn(label="Liquidado Retido", format="R$ %,.2f"),
-    "vlr_pago_orcamentario": st.column_config.NumberColumn(label="Pago Orçamentário", format="R$ %,.2f"),
+    # Dimensões (aux-classificadores) já trazidas via JOIN
+    "UO (sigla)": "uo_sigla",
+    "Ação (descr.)": "acao_desc",
+    "Elemento item (descr.)": "elemento_item_desc",
 }
 
-def _format_brl(x: float) -> str:
-    return f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+MEASURE_OPTIONS = {
+    # Somatórios (medidas)
+    "Empenhado": "vlr_empenhado",
+    "Liquidado": "vlr_liquidado",
+    "Pago Orçamentário": "vlr_pago_orcamentario",
+}
 
-if use_brl_format:
-    for col in list(num_config.keys()):
-        if col in df_show.columns:
-            df_show[col] = df_show[col].map(_format_brl)
+with st.expander("Selecionar colunas da tabela"):
+    c_dim, c_mea, c_opts = st.columns([1, 1, 1])
 
-st.dataframe(
-    df_show,
-    use_container_width=True,
-    hide_index=True,
-    column_config=num_config if not use_brl_format else None,
-)
+    with c_dim:
+        dims_labels = st.multiselect(
+            "Dimensões (colunas de agrupamento)",
+            options=list(DIM_OPTIONS.keys()),
+            default=["Ano", "UO (sigla)"],
+        )
 
-st.download_button(
-    "⬇️ Baixar CSV filtrado",
-    data=df_detalhe.to_csv(index=False).encode("utf-8"),
-    file_name="execucao_detalhe_filtrado.csv",
-    mime="text/csv",
-)
+    with c_mea:
+        meas_labels = st.multiselect(
+            "Medidas (somatório)",
+            options=list(MEASURE_OPTIONS.keys()),
+            default=["Liquidado"],
+            help="As medidas serão somadas dentro de cada combinação de dimensões.",
+        )
+
+    with c_opts:
+        use_brl_format = st.checkbox(
+            "Exibir medidas em BRL (R$ 1.234,56)", value=True
+        )
+        order_cols = dims_labels + meas_labels
+        order_by = st.selectbox(
+            "Ordenar por",
+            options=["(nenhum)"] + order_cols,
+            index=0,
+        )
+        order_asc = st.toggle("Ordem crescente", value=False)
+
+# Monta a tabela dinâmica a partir do df_base (já filtrado)
+sel_dims = [DIM_OPTIONS[lbl] for lbl in dims_labels]
+sel_meas = [MEASURE_OPTIONS[lbl] for lbl in meas_labels]
+
+if not sel_dims and not sel_meas:
+    st.info("Selecione **pelo menos uma Dimensão** ou **uma Medida** para gerar a tabela.")
+else:
+    # Agrega conforme seleção
+    if sel_dims and sel_meas:
+        agg_df = (
+            df_base.groupby(sel_dims, dropna=False)[sel_meas]
+            .sum(numeric_only=True)
+            .reset_index()
+        )
+    elif sel_dims and not sel_meas:
+        # Só dimensões: combinações únicas
+        agg_df = df_base[sel_dims].drop_duplicates().reset_index(drop=True)
+    else:  # só medidas (sem dimensões): total geral
+        tot = {m: float(pd.to_numeric(df_base[m], errors="coerce").sum()) for m in sel_meas}
+        agg_df = pd.DataFrame([tot])
+
+    # Renomeia para rótulos amigáveis
+    rename_map = {**{v: k for k, v in DIM_OPTIONS.items()}, **{v: k for k, v in MEASURE_OPTIONS.items()}}
+    agg_df = agg_df.rename(columns=rename_map)
+
+    # Ordenação (se houver)
+    if order_by and order_by != "(nenhum)" and order_by in agg_df.columns:
+        agg_df = agg_df.sort_values(by=order_by, ascending=order_asc, kind="mergesort")
+
+    # Formatação BRL (apenas na visualização)
+    def _format_brl(x: float) -> str:
+        return f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    display_df = agg_df.copy()
+    if use_brl_format:
+        for lbl in meas_labels:
+            if lbl in display_df.columns:
+                display_df[lbl] = (
+                    pd.to_numeric(display_df[lbl], errors="coerce")
+                    .fillna(0.0)
+                    .map(_format_brl)
+                )
+
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+    st.download_button(
+        "⬇️ Baixar CSV (tabela dinâmica)",
+        data=agg_df.to_csv(index=False).encode("utf-8"),
+        file_name="tabela_dinamica_execucao.csv",
+        mime="text/csv",
+    )
