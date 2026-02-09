@@ -14,10 +14,10 @@
       "mediatype": "text/csv",
       "compression": "gz",
       "encoding": "utf-8",
-      "hash": "sha256:e5500acdf3dad8a798ad6b9032aa216fe06ea56c5cd72ea2a856e4a364bfbc43",
-      "bytes": 887157,
+      "hash": "sha256:faa483059890bc3b8b1e67cc1439117a6f5e4110aff54f9102cfebf23e7b6279",
+      "bytes": 1147024,
       "fields": 30,
-      "rows": 41139,
+      "rows": 54595,
       "schema": {
         "fields": [
           {
@@ -184,10 +184,10 @@
       "mediatype": "text/csv",
       "compression": "gz",
       "encoding": "utf-8",
-      "hash": "sha256:6dea9f1a43646c0ca00bd09b23d89ee264bf755b521625b8ddabf8f01457bdb6",
-      "bytes": 29122,
+      "hash": "sha256:67978cce772548821de8c4f5e14a5f0225baf00001635775bb0a1f3f7b3ce5c4",
+      "bytes": 28828,
       "fields": 13,
-      "rows": 2445,
+      "rows": 2456,
       "schema": {
         "fields": [
           {
@@ -269,10 +269,10 @@
       "mediatype": "text/csv",
       "compression": "gz",
       "encoding": "utf-8",
-      "hash": "sha256:f127763abaf2aeddb591cd7139d51efa6580323a889f4117e4d6f8cd87fc0598",
-      "bytes": 69022,
+      "hash": "sha256:9766f874e000ed6d12aee0287a5a3fd295e7f3f6dd1faf96dbf825fe786996e9",
+      "bytes": 72832,
       "fields": 19,
-      "rows": 4833,
+      "rows": 5060,
       "schema": {
         "fields": [
           {
@@ -384,10 +384,10 @@
       "mediatype": "text/csv",
       "compression": "gz",
       "encoding": "utf-8",
-      "hash": "sha256:25c43adbd7d19e69c824f4029c846f63222cb812e4e9da4691481e30930a4d54",
-      "bytes": 39484,
+      "hash": "sha256:d0eec13fdb45f67f2486e0b3979b71e6eb8d6de4981aac9cfb3651bef490b240",
+      "bytes": 40314,
       "fields": 12,
-      "rows": 1592,
+      "rows": 1628,
       "schema": {
         "fields": [
           {
@@ -464,10 +464,10 @@
       "mediatype": "text/csv",
       "compression": "gz",
       "encoding": "utf-8",
-      "hash": "sha256:25eab2be0d450a847ff0efaf5b3ba12ad7115d48b832424a27ad48ccb27067fd",
-      "bytes": 37443,
+      "hash": "sha256:166bd964df57303ea5c9a39168f2eec50590c90929823e7fbbda7d8de237a53e",
+      "bytes": 38244,
       "fields": 22,
-      "rows": 2579,
+      "rows": 2620,
       "schema": {
         "fields": [
           {
@@ -594,10 +594,10 @@
       "mediatype": "text/csv",
       "compression": "gz",
       "encoding": "utf-8",
-      "hash": "sha256:64a83b603e43ce0badb49f58f4c6d7f8642a45feae195cda07dcc6f03aaba96c",
-      "bytes": 5306062,
+      "hash": "sha256:02d5e563fd3500caa9e753da041853c4b6e0c8c65c46ea3559d7a58333541390",
+      "bytes": 5345172,
       "fields": 45,
-      "rows": 161639,
+      "rows": 162371,
       "schema": {
         "fields": [
           {
@@ -839,8 +839,8 @@
       "mediatype": "text/csv",
       "compression": "gz",
       "encoding": "utf-8",
-      "hash": "sha256:bf907dcfca1b21d6315cec5ee6b71683a913f6148090b59a760868d9ecf56825",
-      "bytes": 5978,
+      "hash": "sha256:8d0a0eb2359bad5dd45458d1d54241f0c09ae59c8c5ffdafdb4207edbff5d2c1",
+      "bytes": 5959,
       "fields": 13,
       "rows": 615,
       "schema": {
@@ -915,12 +915,12 @@
     }
   ],
   "owner_org": "secretaria-de-estado-de-planejamento-e-gestao-seplag",
-  "updated_at": "2026-02-06T10:32:01",
+  "updated_at": "2026-02-09T10:49:16",
   "remote": {
     "host": "raw.githubusercontent.com",
     "user": "splor-mg",
     "repo": "dados-armazem-siafi-2026",
     "ref": "main",
-    "sha": "cfe42ec17160d34a1b8b9d28c1505536f0d867f0"
+    "sha": "5d8b3d77da9367e77fa8172920e7674630ab50eb"
   }
 }
