@@ -1,4 +1,4 @@
-# streamlit/app.py
+# app.py
 # -*- coding: utf-8 -*-
 """
 Propag - Monitoramento do Plano de Aplicação de Investimentos
@@ -31,10 +31,10 @@ from yaml.loader import SafeLoader
 from streamlit_gsheets import GSheetsConnection
 import streamlit_authenticator as stauth
 
-# Métricas (ajustadas para excluir SEE)
-from my_pkg.transform.metrics import load_metrics  # usa seu arquivo atual/ajustado
+# Métricas (ajustadas para excluir SEE no arquivo do projeto)
+from my_pkg.transform.metrics import load_metrics
 # Esquema da tabela de planejamento (mantido do seu projeto)
-from my_pkg.transform.schema import (  # campos e regras da tabela principal
+from my_pkg.transform.schema import (
     ALL_COLS,
     NUMERIC_COLS,
     BOOL_COLS,
@@ -114,7 +114,7 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if data[col].dtype != bool:
             data[col] = data[col].astype(str).str.upper().isin(["TRUE", "1", "SIM"])
 
-    return data[ALL_COLS]  # conforme schema.py do seu projeto  [2](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/Documents/Arquivos%20de%20Microsoft%20Copilot%20Chat/metrics.py)
+    return data[ALL_COLS]  # conforme schema.py do seu projeto
 
 def validate_new_rows(
     df_before: pd.DataFrame,
@@ -195,7 +195,7 @@ def validate_new_rows(
     return True, "", df_after
 
 # -----------------------------------------------------------------------------
-# Autenticação (com deep copy dos segredos para evitar erro de assignment)
+# Autenticação (deep copy dos segredos + nova assinatura login/logout)
 # -----------------------------------------------------------------------------
 auth_cfg_raw = st.secrets.get("auth", {})
 credentials_raw = auth_cfg_raw.get("credentials", {})
@@ -218,13 +218,31 @@ auth = stauth.Authenticate(
 )
 
 st.sidebar.title("Acesso")
-name, auth_status, username = auth.login("Entrar", "sidebar")
+
+# A partir da v0.3.1+, o 1º argumento é 'location' e o nome do form vai em 'fields'
+login_result = auth.login(
+    location="sidebar",
+    fields={"Form name": "Entrar"}
+)
+# Em algumas versões a função retorna a tupla; em outras popula st.session_state
+if isinstance(login_result, tuple):
+    name, auth_status, username = login_result
+else:
+    name = st.session_state.get("name")
+    auth_status = st.session_state.get("authentication_status")
+    username = st.session_state.get("username")
+
 if not auth_status:
     if auth_status is False:
         st.sidebar.error("Usuário ou senha inválidos.")
     st.stop()
 
-auth.logout("Sair", "sidebar")
+# Use uma key única para evitar 'StreamlitDuplicateElementKey'
+auth.logout(
+    button_name="Sair",
+    location="sidebar",
+    key="logout_sidebar"
+)
 st.sidebar.success(f"Olá, {name}!")
 
 # RBAC (secrets + opcional YAML)
@@ -298,7 +316,7 @@ except Exception as e:
     st.error(f"Erro ao conectar no Google Sheets: {e}")
     st.stop()
 
-data = normalize_dataframe(data_raw)  # segue seu schema  [2](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/Documents/Arquivos%20de%20Microsoft%20Copilot%20Chat/metrics.py)
+data = normalize_dataframe(data_raw)
 
 # RLS por UO (não-admin)
 if not is_admin:
