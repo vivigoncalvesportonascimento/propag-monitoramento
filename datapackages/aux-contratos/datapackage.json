@@ -1,0 +1,1252 @@
+{
+  "name": "dados_aux_compras_contratos",
+  "profile": "tabular-data-package",
+  "resources": [
+    {
+      "name": "siad_compras_contratos",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/siad_compras_contratos.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:41c094f119d377b9e292ebd6ae4e651ae0354aedd3768d69f6838fbe59f732f8",
+      "bytes": 6842388,
+      "fields": 12,
+      "rows": 0,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "siafi_credores",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/siafi_credores.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:0fe31eb196ef617b1be21987393fd0cfe2d5bf148ec5b13d186c382f43e2bf60",
+      "bytes": 6178735,
+      "fields": 12,
+      "rows": 33777,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2011",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2011.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:320bf5dd9cb6e50c63ce07d53e800b736541f5ea31b95fc17fbd4dc94c01f5c4",
+      "bytes": 6245558,
+      "fields": 12,
+      "rows": 34354,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2012",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2012.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:4d8c0a476c85e3f266a6186287b0e20df74107807733c1ea8128082173cd47f3",
+      "bytes": 6201564,
+      "fields": 12,
+      "rows": 37278,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2013",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2013.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:97a5abf930a6ee031d699323499c0f703fb2fc7f10843e9b5e366f8979e23bac",
+      "bytes": 6081012,
+      "fields": 12,
+      "rows": 34623,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2014",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2014.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:c11ef2d072a7d7f5997b2a21233b2d9c1d31e159c2c68987034e99d28d9cce8c",
+      "bytes": 5421355,
+      "fields": 12,
+      "rows": 31028,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2015",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2015.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:145eb57585df0923920f9a506912c3b64a5461a90dfd830bbd547662a07b26cf",
+      "bytes": 4760609,
+      "fields": 12,
+      "rows": 28330,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2016",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2016.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:ef33a8ecac8c49dc5b3f8c7b9d190527149dfe457cd4dc7d4ce46a49478711a2",
+      "bytes": 4808821,
+      "fields": 12,
+      "rows": 27418,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2017",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2017.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:846d3deb1edb81fd62ad2268fc3afbcf32d32c651b9d6511c733169ecb0f9d92",
+      "bytes": 4685677,
+      "fields": 12,
+      "rows": 27927,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2018",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2018.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:8a8729a7fe8f65e8ed878f83d0757a91c7e3334ad4bef2ebcec29edc03bc8376",
+      "bytes": 3812997,
+      "fields": 12,
+      "rows": 22369,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2019",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2019.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:bc7d80a97c92292783ab008673d170246d1d08a6aeb425f187827398e8a098b8",
+      "bytes": 3807129,
+      "fields": 12,
+      "rows": 21712,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2020",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2020.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:098206a0058e130ea97e33864b5808acedaee6ca58e6d66fbb9bf0ac7c2c236a",
+      "bytes": 3946617,
+      "fields": 12,
+      "rows": 21832,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2021",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2021.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:f6d11cd1bbf2f7fc1d54508848107b3a4103829adad82a80d987a17f4d95ae66",
+      "bytes": 5111847,
+      "fields": 12,
+      "rows": 25397,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2022",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2022.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:35c6b3e35d458e3e3df4f9c31bd3a0aea6077e03a937e7fab30d985b7e305e91",
+      "bytes": 5066213,
+      "fields": 12,
+      "rows": 24757,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "CNPJ_CPF Credor - Formatado"
+          },
+          {
+            "name": "razao_social",
+            "type": "string",
+            "source": "Razão Social Credor"
+          },
+          {
+            "name": "vlr_empenhado",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2023",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2023.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:7277b45f1f220901fd48593b9043bd18bd2583827a5f54f14eb1ed213ec8b72e",
+      "bytes": 5168042,
+      "fields": 12,
+      "rows": 23590,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "compras_contratos_2024",
+      "type": "table",
+      "profile": "tabular-data-resource",
+      "path": "data/compras_contratos_2024.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "hash": "sha256:13bfcccdabd88212d83961c8a5d7151b45bc640c3ab370972cc0d57b3aa51cbd",
+      "bytes": 4682815,
+      "fields": 12,
+      "rows": 21098,
+      "schema": {
+        "fields": [
+          {
+            "name": "ano",
+            "type": "year",
+            "source": "Ano Processo"
+          },
+          {
+            "name": "uo_cod",
+            "type": "integer",
+            "source": "Código Unidade Orçamentária"
+          },
+          {
+            "name": "num_contrato_saida",
+            "type": "integer",
+            "source": "Número Contrato"
+          },
+          {
+            "name": "Objeto_contrato",
+            "type": "string",
+            "source": "Objeto Contrato"
+          },
+          {
+            "name": "situcao_contrato",
+            "type": "string",
+            "source": "Situação Contrato"
+          },
+          {
+            "name": "tipo_Contrato_desc",
+            "type": "string",
+            "source": "Descrição Tipo de Contrato"
+          },
+          {
+            "name": "data_inicio_vigencia",
+            "type": "datetime",
+            "source": "Data Início Vigência Contrato"
+          },
+          {
+            "name": "data_termino_vigencia",
+            "type": "datetime",
+            "source": "Data Término Vigência Contrato"
+          },
+          {
+            "name": "num_processo_compra",
+            "type": "string",
+            "source": "Número Processo -  Formatado"
+          },
+          {
+            "name": "Objeto_processo_compra",
+            "type": "string",
+            "source": "Objeto Processo"
+          },
+          {
+            "name": "vlr_total_homologado",
+            "type": "number",
+            "source": "Valor Total Homologado"
+          },
+          {
+            "name": "vlr_total_atualizado",
+            "type": "number",
+            "source": "Valor Total Atualizado"
+          }
+        ]
+      }
+    }
+  ],
+  "updated_at": "2025-02-26T10:41:03",
+  "remote": {
+    "host": "raw.githubusercontent.com",
+    "user": "splor-mg",
+    "repo": "dados-aux-contratos",
+    "ref": "main",
+    "sha": "f687ce3a6671fb27f231c76dfdb2058033663899"
+  }
+}
