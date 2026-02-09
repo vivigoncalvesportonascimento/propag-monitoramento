@@ -6,14 +6,14 @@ Propag - Monitoramento do Plano de Aplicação de Investimentos
 Este app:
 - Autentica usuários (streamlit-authenticator) e aplica RBAC por UO.
 - Lê/atualiza dados de planejamento via Google Sheets (st-gsheets-connection).
-- Mostra métricas de topo (limite do plano / liquidado / saldo).
+- Mostra métricas do topo (limite do plano / liquidado / saldo).
 - Exibe e permite editar uma tabela (cronograma) com validações.
-- (NOVO) Adiciona uma visão de Execução do Exercício (fato) + dimensões (UO, Ação, Elemento Item),
-        com filtro global: (fonte = 89 OU ipu = 0) e uo_cod != 1261 (exclui SEE),
-        além de um menu dinâmico de filtros para análise detalhada.
+- Adiciona uma visão de Execução do Exercício (fato) + dimensões (UO, Ação, Elemento Item),
+  com filtro global: (fonte = 89 OU ipu = 0) e uo_cod != 1261 (exclui SEE),
+  além de menu dinâmico de filtros para análise detalhada.
 
-Observações:
-- Requer .streamlit/secrets.toml com blocos 'auth', 'rbac' e 'connections.gsheets'.
+Requisitos:
+- .streamlit/secrets.toml com blocos 'auth', 'rbac' e 'connections.gsheets'.
 - A Service Account do Google precisa de permissão (Editor) na planilha.
 """
 
@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import time
 from functools import lru_cache
+from collections.abc import Mapping
 
 import pandas as pd
 import streamlit as st
@@ -31,10 +32,9 @@ from streamlit_gsheets import GSheetsConnection
 import streamlit_authenticator as stauth
 
 # Métricas (ajustadas para excluir SEE)
-from my_pkg.transform.metrics import load_metrics
-
-# Esquema da tabela de planejamento
-from my_pkg.transform.schema import (
+from my_pkg.transform.metrics import load_metrics  # usa seu arquivo atual/ajustado
+# Esquema da tabela de planejamento (mantido do seu projeto)
+from my_pkg.transform.schema import (  # campos e regras da tabela principal
     ALL_COLS,
     NUMERIC_COLS,
     BOOL_COLS,
@@ -51,7 +51,6 @@ st.set_page_config(
     layout="wide",
 )
 
-
 # -----------------------------------------------------------------------------
 # Utilidades
 # -----------------------------------------------------------------------------
@@ -59,6 +58,13 @@ def brl(value: float) -> str:
     """Formata número como moeda pt-BR (uso rápido)."""
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def _to_plain_dict(obj):
+    """Converte SecretsMapping/listas aninhadas em dict/list 'puros' (mutáveis)."""
+    if isinstance(obj, Mapping):
+        return {k: _to_plain_dict(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_to_plain_dict(x) for x in obj]
+    return obj
 
 def load_rbac_from_secrets() -> dict[str, list]:
     """
@@ -74,7 +80,6 @@ def load_rbac_from_secrets() -> dict[str, list]:
         else:
             out[user] = list(map(int, lst))
     return out
-
 
 def load_access_yaml(path: str = "security/access_control.yaml") -> dict[str, list]:
     """
@@ -92,11 +97,10 @@ def load_access_yaml(path: str = "security/access_control.yaml") -> dict[str, li
     except FileNotFoundError:
         return {}
 
-
 def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     Garante presença/ordem de colunas, normaliza tipos numéricos e booleanos,
-    e retorna somente as colunas esperadas.
+    e retorna somente as colunas esperadas (schema do seu projeto).
     """
     data = df.copy()
     for c in ALL_COLS:
@@ -108,12 +112,9 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     for col in BOOL_COLS:
         if data[col].dtype != bool:
-            data[col] = (
-                data[col].astype(str).str.upper().isin(["TRUE", "1", "SIM"])
-            )
+            data[col] = data[col].astype(str).str.upper().isin(["TRUE", "1", "SIM"])
 
-    return data[ALL_COLS]
-
+    return data[ALL_COLS]  # conforme schema.py do seu projeto  [2](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/Documents/Arquivos%20de%20Microsoft%20Copilot%20Chat/metrics.py)
 
 def validate_new_rows(
     df_before: pd.DataFrame,
@@ -157,8 +158,7 @@ def validate_new_rows(
             str(r["acao_cod"]),
             str(r["intervencao_cod"]),
             str(r["marcos_principais"]),
-        )
-        in new_keys,
+        ) in new_keys,
         axis=1,
     )
     new_rows = df_after[is_new].copy()
@@ -194,17 +194,26 @@ def validate_new_rows(
 
     return True, "", df_after
 
+# -----------------------------------------------------------------------------
+# Autenticação (com deep copy dos segredos para evitar erro de assignment)
+# -----------------------------------------------------------------------------
+auth_cfg_raw = st.secrets.get("auth", {})
+credentials_raw = auth_cfg_raw.get("credentials", {})
 
-# -----------------------------------------------------------------------------
-# Autenticação
-# -----------------------------------------------------------------------------
-auth_cfg = st.secrets.get("auth", {})
-credentials = st.secrets.get("auth", {}).get("credentials", {})
+auth_cfg = _to_plain_dict(auth_cfg_raw)       # <- agora é dict mutável
+credentials = _to_plain_dict(credentials_raw) # <- agora é dict mutável
+
+if "usernames" not in credentials or not isinstance(credentials["usernames"], dict):
+    st.error(
+        "Configuração de credenciais inválida em st.secrets['auth']['credentials']. "
+        "Esperado: {'usernames': {...}}."
+    )
+    st.stop()
 
 auth = stauth.Authenticate(
     credentials=credentials,
     cookie_name=auth_cfg.get("cookie_name", "propag_monitoramento"),
-    cookie_key=auth_cfg.get("cookie_key", "chave-secreta"),  # importante: 'cookie_key'
+    cookie_key=auth_cfg.get("cookie_key", "chave-secreta"),  # nome correto no pacote
     cookie_expiry_days=int(auth_cfg.get("cookie_expiry_days", 1)),
 )
 
@@ -289,7 +298,7 @@ except Exception as e:
     st.error(f"Erro ao conectar no Google Sheets: {e}")
     st.stop()
 
-data = normalize_dataframe(data_raw)
+data = normalize_dataframe(data_raw)  # segue seu schema  [2](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/Documents/Arquivos%20de%20Microsoft%20Copilot%20Chat/metrics.py)
 
 # RLS por UO (não-admin)
 if not is_admin:
@@ -420,12 +429,13 @@ if st.button("💾 Salvar alterações no Google Sheets", type="primary"):
 st.divider()
 st.subheader("Execução orçamentária do exercício (detalhe)")
 
-# ---- Carregamento da execução + dimensões com cache ----
+# ---- Caminhos das bases (dpm install coloca aqui) ---------------------------
 PATH_EXEC = "datapackages/siafi-2026/data/execucao.csv.gz"
 PATH_UO = "datapackages/aux-classificadores/data/uo.csv"
 PATH_ACAO = "datapackages/aux-classificadores/data/acao.csv"
 PATH_ELI = "datapackages/aux-classificadores/data/elemento_item.csv"
 
+# ---- Colunas finais solicitadas --------------------------------------------
 EXEC_VIEW_COLS = [
     "ano",
     "mes_cod",
@@ -448,44 +458,34 @@ EXEC_VIEW_COLS = [
     "vlr_pago_orcamentario",
 ]
 
-
+# ---- Carregamento com cache -------------------------------------------------
 @lru_cache(maxsize=2)
 def _load_execucao_raw() -> pd.DataFrame:
-    df = pd.read_csv(PATH_EXEC, compression="gzip", low_memory=False)
-    return df
-
+    return pd.read_csv(PATH_EXEC, compression="gzip", low_memory=False)
 
 @lru_cache(maxsize=4)
 def _load_dim_uo() -> pd.DataFrame:
     uo = pd.read_csv(PATH_UO, low_memory=False)
-    uo = uo[["ano", "uo_cod", "uo_sigla"]].drop_duplicates()
-    return uo
-
+    return uo[["ano", "uo_cod", "uo_sigla"]].drop_duplicates()
 
 @lru_cache(maxsize=4)
 def _load_dim_acao() -> pd.DataFrame:
     ac = pd.read_csv(PATH_ACAO, low_memory=False)
-    ac = ac[["ano", "acao_cod", "acao_desc"]].drop_duplicates()
-    return ac
-
+    return ac[["ano", "acao_cod", "acao_desc"]].drop_duplicates()
 
 @lru_cache(maxsize=4)
 def _load_dim_elemento_item() -> pd.DataFrame:
     eli = pd.read_csv(PATH_ELI, low_memory=False)
-    eli = eli[["ano", "elemento_item_cod", "elemento_item_desc"]].drop_duplicates()
-    return eli
-
+    return eli[["ano", "elemento_item_cod", "elemento_item_desc"]].drop_duplicates()
 
 def _apply_global_filter(df: pd.DataFrame) -> pd.DataFrame:
-    """Aplica o filtro global: (fonte = 89 OU ipu = 0) e uo_cod != 1261 (exclui SEE)."""
-    # Garante tipos antes de filtrar
+    """(fonte = 89 OU ipu = 0) e uo_cod != 1261 (exclui SEE)."""
     for c in ("fonte_cod", "ipu_cod", "uo_cod"):
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
     return df.loc[
         ((df["fonte_cod"] == 89) | (df["ipu_cod"] == 0)) & (df["uo_cod"] != 1261)
     ].copy()
-
 
 def load_execucao_view(restrict_uo: int | None = None) -> pd.DataFrame:
     """
@@ -500,14 +500,9 @@ def load_execucao_view(restrict_uo: int | None = None) -> pd.DataFrame:
         df = df.loc[pd.to_numeric(df["uo_cod"], errors="coerce") == int(restrict_uo)].copy()
 
     # JOINs
-    uo = _load_dim_uo()
-    df = df.merge(uo, on=["ano", "uo_cod"], how="left")
-
-    ac = _load_dim_acao()
-    df = df.merge(ac, on=["ano", "acao_cod"], how="left")
-
-    eli = _load_dim_elemento_item()
-    df = df.merge(eli, on=["ano", "elemento_item_cod"], how="left")
+    df = df.merge(_load_dim_uo(), on=["ano", "uo_cod"], how="left")
+    df = df.merge(_load_dim_acao(), on=["ano", "acao_cod"], how="left")
+    df = df.merge(_load_dim_elemento_item(), on=["ano", "elemento_item_cod"], how="left")
 
     keep = [c for c in EXEC_VIEW_COLS if c in df.columns]
     out = df[keep].copy()
@@ -528,8 +523,7 @@ def load_execucao_view(restrict_uo: int | None = None) -> pd.DataFrame:
 
     return out
 
-
-# ---- Filtros do visual ----
+# ---- Filtros do visual ------------------------------------------------------
 restrict_uo = None if is_admin else int(working_uo)
 exec_df = load_execucao_view(restrict_uo=restrict_uo)
 
@@ -547,16 +541,19 @@ with st.expander("Filtros (menu dinâmico)"):
         grupo_sel = st.multiselect("Grupo Despesa (cód.)", grupos, default=grupos)
 
     with col2:
+        uo_cod_vals = sorted(exec_df["uo_cod"].dropna().unique().tolist())
+        uo_cod_sel = st.multiselect("UO (cód.)", uo_cod_vals, default=uo_cod_vals)
+
         uos = sorted(exec_df["uo_sigla"].dropna().unique().tolist())
         uo_sigla_sel = st.multiselect("UO (sigla)", uos, default=uos)
 
         acoes = sorted(exec_df["acao_desc"].dropna().unique().tolist())
         acao_sel = st.multiselect("Ação (descrição)", acoes, default=acoes)
 
+    with col3:
         fontes = sorted(exec_df["fonte_cod"].dropna().unique().tolist())
         fonte_sel = st.multiselect("Fonte (cód.)", fontes, default=fontes)
 
-    with col3:
         ipus = sorted(exec_df["ipu_cod"].dropna().unique().tolist())
         ipu_sel = st.multiselect("IPU (cód.)", ipus, default=ipus)
 
@@ -571,6 +568,7 @@ with st.expander("Filtros (menu dinâmico)"):
 mask = (
     exec_df["ano"].isin(ano_sel)
     & exec_df["mes_cod"].isin(mes_sel)
+    & exec_df["uo_cod"].isin(uo_cod_sel)
     & exec_df["uo_sigla"].isin(uo_sigla_sel)
     & exec_df["acao_desc"].isin(acao_sel)
     & exec_df["grupo_cod"].isin(grupo_sel)
