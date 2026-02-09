@@ -5,16 +5,12 @@ Propag - Monitoramento do Plano de Aplicação de Investimentos
 
 Este app:
 - Autentica usuários (streamlit-authenticator) e aplica RBAC por UO.
-- Lê/atualiza dados de planejamento via Google Sheets (st-gsheets-connection).
+- Lê/atualiza dados de planejamento via Google Sheets.
 - Mostra métricas do topo (limite do plano / liquidado / saldo).
-- Tabela de cronograma (editável):
-    * O filtro "UO / Ação / Intervenção" vale APENAS para o cronograma;
-    * A tabela só aparece quando Ação OU Intervenção for selecionada.
-- Seção "Execução do exercício" (independente do filtro do cronograma):
-    (a) Filtros de linhas (opcionais) — sem Mês;
-    (b) Tabela dinâmica: selecione Dimensões e Medidas e o app monta a tabela.
+- Tabela de cronograma (editável).
+- Seção "Execução do exercício": Tabela dinâmica completa.
 
-Regra global SEMPRE aplicada na Execução: (fonte = 89 OU ipu = 0) e uo_cod != 1261 (exclui SEE).
+Regra global SEMPRE aplicada na Execução: (fonte = 89 OU ipu = 0) e uo_cod != 1261.
 """
 
 from __future__ import annotations
@@ -31,9 +27,9 @@ from yaml.loader import SafeLoader
 from streamlit_gsheets import GSheetsConnection
 import streamlit_authenticator as stauth
 
-# Métricas (ajustadas p/ excluir SEE no arquivo do projeto)
+# -- Imports do pacote local --
 from my_pkg.transform.metrics import load_metrics
-# Esquema da tabela de planejamento
+from my_pkg.transform.execucao_view import load_execucao_view
 from my_pkg.transform.schema import (
     ALL_COLS,
     NUMERIC_COLS,
@@ -55,7 +51,7 @@ st.set_page_config(
 # Utils
 # =============================================================================
 def brl(value: float) -> str:
-    """Formata número como moeda pt-BR (uso rápido)."""
+    """Formata número como moeda pt-BR."""
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def _to_plain_dict(obj):
@@ -67,11 +63,6 @@ def _to_plain_dict(obj):
     return obj
 
 def load_rbac_from_secrets() -> dict[str, list]:
-    """
-    Lê mapeamento de RBAC de st.secrets["rbac"].
-    - Usuário com ["*"] é admin.
-    - Demais usuários: lista de UOs (inteiros).
-    """
     raw = st.secrets.get("rbac", {})
     out: dict[str, list] = {}
     for user, lst in raw.items():
@@ -82,12 +73,6 @@ def load_rbac_from_secrets() -> dict[str, list]:
     return out
 
 def load_access_yaml(path: str = "security/access_control.yaml") -> dict[str, list]:
-    """
-    Opcional: carrega YAML externo de controle de acesso.
-      users:
-        usuario_x:
-          allowed_uos: [1234, 5678]
-    """
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.load(f, Loader=SafeLoader) or {}
@@ -97,22 +82,15 @@ def load_access_yaml(path: str = "security/access_control.yaml") -> dict[str, li
         return {}
 
 def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Garante presença/ordem de colunas, normaliza tipos numéricos e booleanos
-    e retorna somente as colunas esperadas (schema do projeto).
-    """
     data = df.copy()
     for c in ALL_COLS:
         if c not in data.columns:
             data[c] = None
-
     for col in NUMERIC_COLS:
         data[col] = pd.to_numeric(data[col], errors="coerce").fillna(0.0)
-
     for col in BOOL_COLS:
         if data[col].dtype != bool:
             data[col] = data[col].astype(str).str.upper().isin(["TRUE", "1", "SIM"])
-
     return data[ALL_COLS]
 
 def validate_new_rows(
@@ -122,55 +100,22 @@ def validate_new_rows(
     is_admin: bool,
     working_uo: int | None,
 ) -> tuple[bool, str, pd.DataFrame]:
-    """
-    Valida novas linhas (campos obrigatórios) e marca 'novo_marco' = 'Sim'.
-    Também reforça restrição por UO para usuários não-admin.
-    Retorna: (is_valid, msg, df_after_possivelmente_ajustado)
-    """
-    before_idx = set(
-        map(
-            tuple,
-            df_before[
-                ["uo_cod", "acao_cod", "intervencao_cod", "marcos_principais"]
-            ].astype(str).values,
-        )
-    )
-    after_idx = set(
-        map(
-            tuple,
-            df_after[
-                ["uo_cod", "acao_cod", "intervencao_cod", "marcos_principais"]
-            ].astype(str).values,
-        )
-    )
+    before_idx = set(map(tuple, df_before[["uo_cod", "acao_cod", "intervencao_cod", "marcos_principais"]].astype(str).values))
+    after_idx = set(map(tuple, df_after[["uo_cod", "acao_cod", "intervencao_cod", "marcos_principais"]].astype(str).values))
     new_keys = after_idx - before_idx
 
-    is_new = df_after.apply(
-        lambda r: (
-            str(r["uo_cod"]),
-            str(r["acao_cod"]),
-            str(r["intervencao_cod"]),
-            str(r["marcos_principais"]),
-        ) in new_keys,
-        axis=1,
-    )
+    is_new = df_after.apply(lambda r: (str(r["uo_cod"]), str(r["acao_cod"]), str(r["intervencao_cod"]), str(r["marcos_principais"])) in new_keys, axis=1)
     new_rows = df_after[is_new].copy()
 
     if not new_rows.empty:
-        if (
-            new_rows[REQUIRED_ON_NEW].isnull().any(axis=1).any()
-            or (new_rows[REQUIRED_ON_NEW] == "").any(axis=1).any()
-        ):
+        if (new_rows[REQUIRED_ON_NEW].isnull().any(axis=1).any() or (new_rows[REQUIRED_ON_NEW] == "").any(axis=1).any()):
             return False, "Necessário preencher todos os campos da linha nova.", df_after
         df_after.loc[is_new, "novo_marco"] = "Sim"
 
     if not is_admin:
         if df_after["uo_cod"].isnull().any():
             return False, "Há linhas sem UO definida.", df_after
-        uos = set(
-            pd.to_numeric(df_after["uo_cod"], errors="coerce")
-            .fillna(-1).astype(int).tolist()
-        )
+        uos = set(pd.to_numeric(df_after["uo_cod"], errors="coerce").fillna(-1).astype(int).tolist())
         if allowed_uos is None or not uos.issubset(set(allowed_uos)):
             return False, "Você só pode visualizar/editar sua(s) UO(s) autorizada(s).", df_after
         if working_uo is not None and (uos - {working_uo}):
@@ -179,18 +124,15 @@ def validate_new_rows(
     return True, "", df_after
 
 # =============================================================================
-# Autenticação (deep copy dos segredos + nova assinatura login/logout)
+# Autenticação
 # =============================================================================
 auth_cfg_raw = st.secrets.get("auth", {})
 credentials_raw = auth_cfg_raw.get("credentials", {})
 auth_cfg = _to_plain_dict(auth_cfg_raw)
 credentials = _to_plain_dict(credentials_raw)
 
-if "usernames" not in credentials or not isinstance(credentials["usernames"], dict):
-    st.error(
-        "Configuração de credenciais inválida em st.secrets['auth']['credentials']. "
-        "Esperado: {'usernames': {...}}."
-    )
+if "usernames" not in credentials:
+    st.error("Configuração de credenciais inválida.")
     st.stop()
 
 auth = stauth.Authenticate(
@@ -201,10 +143,8 @@ auth = stauth.Authenticate(
 )
 
 st.sidebar.title("Acesso")
-
-# A partir da v0.3.1+, 1º arg = location; nome do form em fields
 login_result = auth.login(location="sidebar", fields={"Form name": "Entrar"})
-# Compatibilidade: algumas versões retornam tupla; outras populam st.session_state
+
 if isinstance(login_result, tuple):
     name, auth_status, username = login_result
 else:
@@ -220,7 +160,7 @@ if not auth_status:
 auth.logout(button_name="Sair", location="sidebar", key="logout_sidebar")
 st.sidebar.success(f"Olá, {name}!")
 
-# RBAC (secrets + opcional YAML)
+# RBAC
 rbac_secrets = load_rbac_from_secrets()
 rbac_yaml = load_access_yaml()
 allowed_uos_list = []
@@ -232,17 +172,16 @@ if username in rbac_yaml and not allowed_uos_list:
 is_admin = ("*" in allowed_uos_list)
 allowed_uos = None if is_admin else set(map(int, allowed_uos_list))
 
-# Usuário com múltiplas UOs escolhe 'UO de trabalho'
 working_uo = None
 if is_admin:
     st.sidebar.info("Perfil: **Admin (acesso total)**")
 else:
     if not allowed_uos:
-        st.error("Sua conta não possui UO(s) autorizada(s). Contate o administrador.")
+        st.error("Conta sem UO autorizada.")
         st.stop()
     if len(allowed_uos) == 1:
         working_uo = list(allowed_uos)[0]
-        st.sidebar.info(f"UO autorizada: {working_uo}")
+        st.sidebar.info(f"UO: {working_uo}")
     else:
         working_uo = st.sidebar.selectbox("UO de trabalho", sorted(allowed_uos))
 
@@ -257,17 +196,13 @@ except Exception as e:
 
 st.title("Propag - Monitoramento do Plano de Aplicação de Investimentos")
 c1, c2, c3 = st.columns(3)
-with c1:
-    st.metric("Valor Total do Plano", brl(vlr_plano))
-with c2:
-    st.metric("Valor Total Liquidado", brl(vlr_liq))
-with c3:
-    st.metric("Saldo a Liquidar", brl(saldo))
-
+with c1: st.metric("Valor Total do Plano", brl(vlr_plano))
+with c2: st.metric("Valor Total Liquidado", brl(vlr_liq))
+with c3: st.metric("Saldo a Liquidar", brl(saldo))
 st.divider()
 
 # =============================================================================
-# Google Sheets - leitura (cronograma editável)
+# Google Sheets (Cronograma)
 # =============================================================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 ss = st.secrets.get("connections", {}).get("gsheets", {})
@@ -278,30 +213,22 @@ with st.sidebar:
     st.header("Dados (Google Sheets)")
     spreadsheet = st.text_input("URL/ID da Planilha", value=str(spreadsheet or ""))
     worksheet = st.text_input("Aba (worksheet)", value=str(worksheet or "Página1"))
-    st.caption("A planilha deve estar compartilhada com a Service Account (Editor).")
 
 if not spreadsheet:
-    st.error("❌ Configure a URL/ID da planilha em .streamlit/secrets.toml ou na sidebar.")
+    st.error("❌ Configure a URL da planilha.")
     st.stop()
 
 try:
     data_raw = conn.read(spreadsheet=spreadsheet, worksheet=worksheet, ttl=5)
 except Exception as e:
-    st.error(f"Erro ao conectar no Google Sheets: {e}")
+    st.error(f"Erro no Google Sheets: {e}")
     st.stop()
 
 data = normalize_dataframe(data_raw)
-
-# RLS por UO (não-admin)
 if not is_admin:
-    data = data[
-        pd.to_numeric(data["uo_cod"], errors="coerce").fillna(-1).astype(int)
-        == int(working_uo)
-    ].copy()
+    data = data[pd.to_numeric(data["uo_cod"], errors="coerce").fillna(-1).astype(int) == int(working_uo)].copy()
 
-# =============================================================================
-# Filtros do CRONOGRAMA (apenas para a tabela editável)
-# =============================================================================
+# Filtros do Cronograma
 st.subheader("Filtros do cronograma")
 col_uo, col_acao, col_interv = st.columns([1, 1, 1])
 
@@ -312,7 +239,6 @@ with col_uo:
     else:
         uo_sel = "Filtrado pela sua credencial"
 
-# Base para a tabela editável (já filtrada por UO do usuário quando não-admin)
 df_f = data.copy()
 if is_admin and uo_sel != "Todas":
     df_f = df_f[df_f["uo_sigla"] == uo_sel]
@@ -325,53 +251,28 @@ with col_interv:
     intervs = sorted(df_f["intervencao_desc"].dropna().unique().tolist())
     interv_sel = st.selectbox("Intervenção", ["Todas"] + intervs)
 
-# Condição: tabela editável só aparece quando Ação OU Intervenção for selecionada
 show_editor = not (acao_sel == "Todas" and interv_sel == "Todas")
 
 if not show_editor:
-    st.info("🧭 Selecione **a Intervenção** OU **a Ação Orçamentária** para visualizar e editar o cronograma.")
+    st.info("🧭 Selecione **Intervenção** OU **Ação Orçamentária** para editar o cronograma.")
 else:
     if interv_sel != "Todas":
         st.markdown(f"### Intervenção Selecionada: **{interv_sel}**")
-
+    
     df_edit = df_f.copy()
-    if acao_sel != "Todas":
-        df_edit = df_edit[df_edit["acao_desc"] == acao_sel]
-    if interv_sel != "Todas":
-        df_edit = df_edit[df_edit["intervencao_desc"] == interv_sel]
+    if acao_sel != "Todas": df_edit = df_edit[df_edit["acao_desc"] == acao_sel]
+    if interv_sel != "Todas": df_edit = df_edit[df_edit["intervencao_desc"] == interv_sel]
 
     st.divider()
     st.subheader("Dados para Preenchimento")
-    st.info(
-        "Edite os campos permitidos diretamente na tabela. "
-        "Para **inserir nova linha**, use o botão `+` ao final da tabela. "
-        "Novas linhas serão marcadas automaticamente como `novo_marco = 'Sim'`."
-    )
-
+    
     disabled_cols = [c for c in ALL_COLS if (c not in EDITABLE_COLS and c != "novo_marco")]
     column_config = {
         "valor_previsto_total": st.column_config.TextColumn(disabled=True),
-        "1_bimestre_planejado": st.column_config.CheckboxColumn(disabled=True),
-        "2_bimestre_planejado": st.column_config.CheckboxColumn(disabled=True),
-        "3_bimestre_planejado": st.column_config.CheckboxColumn(disabled=True),
-        "4_bimestre_planejado": st.column_config.CheckboxColumn(disabled=True),
-        "5_bimestre_planejado": st.column_config.CheckboxColumn(disabled=True),
-        "6_bimestre_planejado": st.column_config.CheckboxColumn(disabled=True),
-        "novo_marco": st.column_config.SelectboxColumn(
-            "Novo Marco?", options=["Sim", "Não"], default="Sim", required=True
-        ),
+        "novo_marco": st.column_config.SelectboxColumn("Novo Marco?", options=["Sim", "Não"], default="Sim", required=True),
         "acao_cod": st.column_config.NumberColumn(disabled=False),
-        "acao_desc": st.column_config.TextColumn(disabled=False),
-        "intervencao_cod": st.column_config.NumberColumn(disabled=False),
-        "intervencao_desc": st.column_config.TextColumn(disabled=False),
-        "marcos_principais": st.column_config.TextColumn(disabled=False),
+        "uo_cod": st.column_config.NumberColumn(disabled=False) if is_admin else st.column_config.NumberColumn(disabled=True),
     }
-    if not is_admin:
-        column_config["uo_cod"] = st.column_config.NumberColumn(disabled=True)
-        column_config["uo_sigla"] = st.column_config.TextColumn(disabled=True)
-    else:
-        column_config["uo_cod"] = st.column_config.NumberColumn(disabled=False)
-        column_config["uo_sigla"] = st.column_config.TextColumn(disabled=False)
 
     if not is_admin and "uo_cod" in df_edit.columns:
         df_edit["uo_cod"] = int(working_uo)
@@ -379,328 +280,139 @@ else:
     df_edit["novo_marco"] = df_edit["novo_marco"].fillna("Não").astype(str)
 
     edited_df = st.data_editor(
-        df_edit,
-        num_rows="dynamic",
-        use_container_width=True,
-        column_config=column_config,
-        disabled=disabled_cols,
-        key="editor_principal",
+        df_edit, num_rows="dynamic", use_container_width=True,
+        column_config=column_config, disabled=disabled_cols, key="editor_principal",
     )
 
-    # Salvar no Google Sheets (somente quando o editor está visível)
     if st.button("💾 Salvar alterações no Google Sheets", type="primary"):
-        is_valid, msg, edited_df = validate_new_rows(
-            df_before=df_edit,
-            df_after=edited_df,
-            allowed_uos=list(allowed_uos) if allowed_uos else None,
-            is_admin=is_admin,
-            working_uo=None if is_admin else int(working_uo),
-        )
+        is_valid, msg, edited_df = validate_new_rows(df_edit, edited_df, list(allowed_uos) if allowed_uos else None, is_admin, None if is_admin else int(working_uo))
         if not is_valid:
             st.error(f"❌ {msg}")
         else:
             mask_to_drop = data_raw.index.isin(df_edit.index)
             data_sem = data_raw.drop(index=data_raw.index[mask_to_drop])
             final_df = pd.concat([data_sem, edited_df], ignore_index=True)[ALL_COLS]
-
             try:
                 conn.update(spreadsheet=spreadsheet, worksheet=worksheet, data=final_df)
-                st.success("✅ Dados atualizados com sucesso!")
-                st.balloons()
+                st.success("✅ Atualizado com sucesso!")
                 time.sleep(1.2)
                 st.rerun()
             except Exception as e:
-                st.error(f"Erro ao salvar no Google Sheets: {e}")
+                st.error(f"Erro ao salvar: {e}")
 
 # =============================================================================
-# Seção: Execução orçamentária do exercício (independente do filtro acima)
+# Execução Orçamentária (Tabela Dinâmica Completa)
 # =============================================================================
 st.divider()
-st.subheader("Execução orçamentária do exercício (detalhe)")
+st.subheader("Execução orçamentária do exercício (Tabela Dinâmica)")
 
-# ---- Caminhos (dpm install coloca aqui) -------------------------------------
-PATH_EXEC = "datapackages/siafi-2026/data/execucao.csv.gz"
-PATH_UO   = "datapackages/aux-classificadores/data/uo.csv"
-PATH_ACAO = "datapackages/aux-classificadores/data/acao.csv"
-PATH_ELI  = "datapackages/aux-classificadores/data/elemento_item.csv"
-
-# ---- Colunas disponíveis -----------------------------------------------------
-EXEC_VIEW_COLS = [
-    # Dimensões
-    "ano","uo_cod","uo_sigla","acao_cod","acao_desc","grupo_cod",
-    "fonte_cod","ipu_cod","elemento_item_cod","elemento_item_desc",
-    "cnpj_cpf_formatado","num_contrato_saida","num_obra","num_empenho",
-    # Medidas
-    "vlr_empenhado","vlr_liquidado","vlr_pago_orcamentario",
-]
-
-# ---- Carregamento com cache -------------------------------------------------
-@lru_cache(maxsize=2)
-def _load_execucao_raw() -> pd.DataFrame:
-    return pd.read_csv(PATH_EXEC, compression="gzip", low_memory=False)
-
-@lru_cache(maxsize=4)
-def _load_dim_uo() -> pd.DataFrame:
-    uo = pd.read_csv(PATH_UO, low_memory=False)
-    return uo[["ano", "uo_cod", "uo_sigla"]].drop_duplicates()
-
-@lru_cache(maxsize=4)
-def _load_dim_acao() -> pd.DataFrame:
-    ac = pd.read_csv(PATH_ACAO, low_memory=False)
-    return ac[["ano", "acao_cod", "acao_desc"]].drop_duplicates()
-
-@lru_cache(maxsize=4)
-def _load_dim_elemento_item() -> pd.DataFrame:
-    eli = pd.read_csv(PATH_ELI, low_memory=False)
-    return eli[["ano", "elemento_item_cod", "elemento_item_desc"]].drop_duplicates()
-
-def _apply_global_filter(df: pd.DataFrame) -> pd.DataFrame:
-    """(fonte = 89 OU ipu = 0) e uo_cod != 1261 (exclui SEE)."""
-    for c in ("fonte_cod", "ipu_cod", "uo_cod"):
-        if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
-    return df.loc[
-        ((df["fonte_cod"] == 89) | (df["ipu_cod"] == 0)) & (df["uo_cod"] != 1261)
-    ].copy()
-
-def load_execucao_view(restrict_uo: int | None = None) -> pd.DataFrame:
-    """
-    Retorna visão de execução com dimensões (UO, Ação, Elemento Item) e filtro global aplicado.
-    Se `restrict_uo` informado, restringe também àquela UO (RLS de não-admin).
-    """
-    df = _load_execucao_raw()
-    df = _apply_global_filter(df)
-
-    if restrict_uo is not None:
-        df = df.loc[pd.to_numeric(df["uo_cod"], errors="coerce") == int(restrict_uo)].copy()
-
-    df = df.merge(_load_dim_uo(), on=["ano", "uo_cod"], how="left")
-    df = df.merge(_load_dim_acao(), on=["ano", "acao_cod"], how="left")
-    df = df.merge(_load_dim_elemento_item(), on=["ano", "elemento_item_cod"], how="left")
-
-    keep = [c for c in EXEC_VIEW_COLS if c in df.columns]
-    out = df[keep].copy()
-
-    # Garante numéricos para medidas
-    for col in ["vlr_empenhado", "vlr_liquidado", "vlr_pago_orcamentario"]:
-        if col in out.columns:
-            out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0.0)
-
-    # Ajusta inteiros nas dimensões (quando houver)
-    int_cols = [
-        "uo_cod","acao_cod","grupo_cod","fonte_cod","ipu_cod","elemento_item_cod",
-        "num_contrato_saida","num_obra","num_empenho"
-    ]
-    for col in int_cols:
-        if col in out.columns:
-            out[col] = pd.to_numeric(out[col], errors="coerce").astype("Int64")
-
-    return out
-
-# -----------------------------------------------------------------------------
-# (1) Filtros de linhas (opcionais) - recorte do dataset base (SEM MÊS)
-# -----------------------------------------------------------------------------
-restrict_uo = None if is_admin else int(working_uo)
-exec_df = load_execucao_view(restrict_uo=restrict_uo)
-
-with st.expander("Filtros de linhas (opcional)"):
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        anos = sorted(exec_df["ano"].dropna().unique().tolist())
-        ano_sel = st.multiselect("Ano", anos, default=anos)
-
-        grupos = sorted(exec_df["grupo_cod"].dropna().unique().tolist())
-        grupo_sel = st.multiselect("Grupo Despesa (cód.)", grupos, default=grupos)
-
-        fontes = sorted(exec_df["fonte_cod"].dropna().unique().tolist())
-        fonte_sel = st.multiselect("Fonte (cód.)", fontes, default=fontes)
-
-    with col2:
-        uo_cod_vals = sorted(exec_df["uo_cod"].dropna().unique().tolist())
-        uo_cod_sel = st.multiselect("UO (cód.)", uo_cod_vals, default=uo_cod_vals)
-
-        uos = sorted(exec_df["uo_sigla"].dropna().unique().tolist())
-        uo_sigla_sel = st.multiselect("UO (sigla)", uos, default=uos)
-
-        ipus = sorted(exec_df["ipu_cod"].dropna().unique().tolist())
-        ipu_sel = st.multiselect("IPU (cód.)", ipus, default=ipus)
-
-    with col3:
-        acoes = sorted(exec_df["acao_desc"].dropna().unique().tolist())
-        acao_sel = st.multiselect("Ação (descrição)", acoes, default=acoes)
-
-        elis = sorted(exec_df["elemento_item_desc"].dropna().unique().tolist())
-        eli_sel = st.multiselect("Elemento item (descrição)", elis, default=elis)
-
-        cnpj_cpfs = st.text_input("CNPJ/CPF (contém)").strip()
-        num_contrato = st.text_input("Nº contrato saída (contém)").strip()
-        num_obra = st.text_input("Nº obra (contém)").strip()
-        num_empenho = st.text_input("Nº empenho (contém)").strip()
-
-# Aplica filtros (todos opcionais)
-mask = (
-    exec_df["ano"].isin(ano_sel)
-    & exec_df["grupo_cod"].isin(grupo_sel)
-    & exec_df["fonte_cod"].isin(fonte_sel)
-    & exec_df["uo_cod"].isin(uo_cod_sel)
-    & exec_df["uo_sigla"].isin(uo_sigla_sel)
-    & exec_df["ipu_cod"].isin(ipu_sel)
-    & exec_df["acao_desc"].isin(acao_sel)
-    & exec_df["elemento_item_desc"].isin(eli_sel)
-)
-df_base = exec_df.loc[mask].copy()
-
-def _contains(series: pd.Series, token: str) -> pd.Series:
-    if not token:
-        return pd.Series([True] * len(series), index=series.index)
-    return series.astype(str).str.contains(token, case=False, na=False)
-
-# Filtros textuais
-if "cnpj_cpf_formatado" in df_base.columns:
-    df_base = df_base[_contains(df_base["cnpj_cpf_formatado"], cnpj_cpfs)]
-for col, token in [
-    ("num_contrato_saida", num_contrato),
-    ("num_obra", num_obra),
-    ("num_empenho", num_empenho),
-]:
-    if col in df_base.columns:
-        df_base = df_base[_contains(df_base[col], token)]
+# 1. Carrega os dados "Wide" (todas as colunas disponíveis, já filtradas e com joins)
+restrict_uo_exec = None if is_admin else int(working_uo)
+with st.spinner("Carregando base de execução..."):
+    df_base = load_execucao_view(restrict_uo=restrict_uo_exec)
 
 st.caption(
-    "Filtro global aplicado: **(fonte = 89 OU ipu = 0) e uo_cod ≠ 1261 (exclui SEE)** · "
-    + ("visão de todas as UOs" if is_admin else f"UO de trabalho: {working_uo}")
+    "Filtro global aplicado: **(fonte = 89 OU ipu = 0) e uo_cod ≠ 1261** · "
+    + ("Visão Admin" if is_admin else f"UO: {working_uo}")
 )
 
-# -----------------------------------------------------------------------------
-# (2) Tabela dinâmica - seleção de variáveis (Dimensões/Medidas)
-# -----------------------------------------------------------------------------
-st.subheader("Tabela dinâmica (seleção de variáveis)")
-
+# 2. Definição do Menu Dinâmico (Mapeamento Nome -> Coluna)
 DIM_OPTIONS = {
     "Ano": "ano",
     "UO (cód.)": "uo_cod",
     "UO (sigla)": "uo_sigla",
     "Ação (cód.)": "acao_cod",
-    "Ação (descr.)": "acao_desc",
-    "Grupo Despesa (cód.)": "grupo_cod",
+    "Ação (descrição)": "acao_desc",
+    "Grupo de Despesa (cód.)": "grupo_cod",
     "Fonte (cód.)": "fonte_cod",
     "IPU (cód.)": "ipu_cod",
-    "Elemento item (cód.)": "elemento_item_cod",
-    "Elemento item (descr.)": "elemento_item_desc",
-    "CNPJ/CPF (formatado)": "cnpj_cpf_formatado",
-    "Nº contrato saída": "num_contrato_saida",
-    "Nº obra": "num_obra",
-    "Nº empenho": "num_empenho",
+    "Elemento de Item (cód.)": "elemento_item_cod",
+    "Elemento de Item (descrição)": "elemento_item_desc",
+    "CNPJ/CPF Credor": "cnpj_cpf_formatado",
+    "Nº Contrato Saída": "num_contrato_saida",
+    "Nº Obra": "num_obra",
+    "Nº Empenho": "num_empenho"
 }
 
 MEASURE_OPTIONS = {
-    "Empenhado": "vlr_empenhado",
-    "Liquidado": "vlr_liquidado",
-    "Pago Orçamentário": "vlr_pago_orcamentario",
+    "Valor Empenhado": "vlr_empenhado",
+    "Valor Liquidado": "vlr_liquidado",
+    "Valor Pago Orçamentário": "vlr_pago_orcamentario"
 }
 
-with st.expander("Selecionar colunas da tabela"):
-    c_dim, c_mea, c_opts = st.columns([1, 1, 1])
-
+# 3. Interface de Seleção
+with st.expander("Montar Tabela (Selecione Variáveis)", expanded=True):
+    c_dim, c_mea = st.columns(2)
     with c_dim:
+        st.markdown("##### 1. Agrupar por (Linhas):")
         dims_labels = st.multiselect(
-            "Dimensões (colunas de agrupamento)",
+            "Selecione as dimensões:",
             options=list(DIM_OPTIONS.keys()),
             default=["Ano", "UO (sigla)"],
+            placeholder="Ex: Ano, Ação, Fonte..."
         )
-
     with c_mea:
+        st.markdown("##### 2. Somar os valores (Métricas):")
         meas_labels = st.multiselect(
-            "Medidas (somatório)",
+            "Selecione os valores:",
             options=list(MEASURE_OPTIONS.keys()),
-            default=["Liquidado"],
-            help="As medidas serão somadas dentro de cada combinação de dimensões.",
+            default=["Valor Liquidado"],
+            placeholder="Ex: Valor Liquidado"
         )
+    
+    c_opt1, c_opt2 = st.columns(2)
+    with c_opt1: use_brl = st.toggle("Formatar R$", value=True)
+    with c_opt2: remove_zero = st.toggle("Ocultar zerados", value=False) # <--- Alterado para False
 
-    with c_opts:
-        use_brl_format = st.checkbox(
-            "Exibir medidas em BRL (R$ 1.234,56)", value=True
-        )
-        order_cols = dims_labels + meas_labels
-        order_by = st.selectbox(
-            "Ordenar por",
-            options=["(nenhum)"] + order_cols,
-            index=0,
-        )
-        order_asc = st.toggle("Ordem crescente", value=False)
-
-# --- Saneamento e agregação robustos -----------------------------------------
-sel_dims = [DIM_OPTIONS[lbl] for lbl in dims_labels]
-sel_meas = [MEASURE_OPTIONS[lbl] for lbl in meas_labels]
-
-# Converte medidas selecionadas para numérico (se existirem na base)
-for m in sel_meas:
-    if m in df_base.columns:
-        df_base[m] = pd.to_numeric(df_base[m], errors="coerce").fillna(0.0)
-
-# Mantém só medidas que realmente existem na base
-missing_meas = [m for m in sel_meas if m not in df_base.columns]
-sel_meas_ok = [m for m in sel_meas if m in df_base.columns]
-
-if missing_meas:
-    st.warning(
-        "As seguintes medidas não estão disponíveis no conjunto atual e serão ignoradas: "
-        + ", ".join(missing_meas)
-    )
-
-if not sel_dims and not sel_meas_ok:
-    st.info("Selecione **pelo menos uma Dimensão** ou **uma Medida** para gerar a tabela.")
+# 4. Lógica de Processamento (Pivot/Groupby)
+if not meas_labels:
+    st.warning("⚠️ Selecione pelo menos uma métrica.")
 else:
-    if sel_dims and sel_meas_ok:
-        # Agregação explícita garante a criação das colunas somadas
-        agg_dict = {m: "sum" for m in sel_meas_ok}
-        agg_df = df_base.groupby(sel_dims, dropna=False).agg(agg_dict).reset_index()
+    sel_dims = [DIM_OPTIONS[l] for l in dims_labels]
+    sel_meas = [MEASURE_OPTIONS[l] for l in meas_labels]
 
-        # Garante presença das medidas (se groupby retornasse vazio)
-        for m in sel_meas_ok:
-            if m not in agg_df.columns:
-                agg_df[m] = 0.0
-
-    elif sel_dims and not sel_meas_ok:
-        # Só dimensões: combinações únicas
-        agg_df = df_base[sel_dims].drop_duplicates().reset_index(drop=True)
-
+    # Agrupa e soma
+    if not sel_dims:
+        # Total geral (sem dimensão)
+        agg_df = pd.DataFrame(df_base[sel_meas].sum()).T
     else:
-        # Só medidas: total geral
-        tot = {m: float(pd.to_numeric(df_base[m], errors="coerce").sum()) for m in sel_meas_ok}
-        agg_df = pd.DataFrame([tot])
+        # Agrupamento dinâmico
+        agg_df = df_base.groupby(sel_dims, dropna=False)[sel_meas].sum().reset_index()
 
-    # Renomeia p/ rótulos amigáveis (apenas colunas presentes)
-    rename_map = {
-        **{v: k for k, v in DIM_OPTIONS.items() if v in agg_df.columns},
-        **{v: k for k, v in MEASURE_OPTIONS.items() if v in agg_df.columns},
-    }
-    agg_df = agg_df.rename(columns=rename_map)
+    # Filtro de linhas zeradas
+    if remove_zero:
+        agg_df = agg_df.loc[agg_df[sel_meas].sum(axis=1) != 0]
 
     # Ordenação
-    if order_by and order_by != "(nenhum)" and order_by in agg_df.columns:
-        agg_df = agg_df.sort_values(by=order_by, ascending=order_asc, kind="mergesort")
+    if sel_dims:
+        agg_df = agg_df.sort_values(by=sel_dims)
 
-    # Formatação BRL (apenas visual)
-    def _format_brl(x: float) -> str:
-        return f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
+    # Preparação Visual (Renomear e Formatar)
     display_df = agg_df.copy()
-    if use_brl_format:
+    
+    # Renomeia colunas técnicas para nomes amigáveis
+    rev_dims = {v: k for k, v in DIM_OPTIONS.items()}
+    rev_meas = {v: k for k, v in MEASURE_OPTIONS.items()}
+    display_df = display_df.rename(columns={**rev_dims, **rev_meas})
+
+    # Formatação (apenas visual)
+    if use_brl:
         for lbl in meas_labels:
             if lbl in display_df.columns:
-                display_df[lbl] = (
-                    pd.to_numeric(display_df[lbl], errors="coerce")
-                    .fillna(0.0)
-                    .map(_format_brl)
+                display_df[lbl] = display_df[lbl].apply(
+                    lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 )
 
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    st.dataframe(
+        display_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={"Ano": st.column_config.NumberColumn(format="%d")}
+    )
 
     st.download_button(
-        "⬇️ Baixar CSV (tabela dinâmica)",
-        data=agg_df.to_csv(index=False).encode("utf-8"),
+        "⬇️ Baixar CSV",
+        data=agg_df.to_csv(index=False, sep=";", decimal=",").encode("utf-8-sig"),
         file_name="tabela_dinamica_execucao.csv",
-        mime="text/csv",
+        mime="text/csv"
     )
