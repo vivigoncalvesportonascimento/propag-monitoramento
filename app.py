@@ -5,11 +5,10 @@ Propag - Monitoramento do Plano de Aplicação de Investimentos
 
 Este app:
 1. Autentica usuários (streamlit-authenticator) e aplica regras de acesso (RBAC).
-2. Exibe métricas gerais do plano no topo (Sempre visível).
-3. Exibe e permite edição do Cronograma Físico/Google Sheets (Sempre visível).
-4. Possui um seletor para alternar a visão inferior entre:
-   - Execução Orçamentária do Exercício (2026)
-   - Restos a Pagar (RP)
+2. Layout ajustado:
+   - Sidebar inicia recolhida (retrátil).
+   - Tela de login centralizada e com largura controlada.
+3. Exibe métricas, cronograma (Google Sheets) e detalhes financeiros.
 """
 
 from __future__ import annotations
@@ -40,6 +39,8 @@ st.set_page_config(
     page_title="Propag - Monitoramento",
     page_icon="📊",
     layout="wide",
+    # <--- Sidebar inicia fechada (retrátil)
+    initial_sidebar_state="collapsed",
 )
 
 # =============================================================================
@@ -132,7 +133,7 @@ def validate_new_rows(df_before, df_after, allowed_uos, is_admin, working_uo):
 
 
 # =============================================================================
-# Autenticação (Ajustada para Login Centralizado)
+# Autenticação
 # =============================================================================
 auth_cfg = _to_plain_dict(st.secrets.get("auth", {}))
 credentials = _to_plain_dict(auth_cfg.get("credentials", {}))
@@ -148,8 +149,15 @@ auth = stauth.Authenticate(
     cookie_expiry_days=int(auth_cfg.get("cookie_expiry_days", 1)),
 )
 
-# --- MUDANÇA AQUI: Login no 'main' (centro da tela) ---
-login_result = auth.login(location="main", fields={"Form name": "Login"})
+# --- AJUSTE DE LAYOUT DO LOGIN ---
+# Cria colunas para centralizar o formulário
+# [Espaço Vazio] - [Formulário Login] - [Espaço Vazio]
+# Proporção 3 - 2 - 3 deixa o login bem compacto no centro
+col_esq, col_centro, col_dir = st.columns([3, 2, 3])
+
+with col_centro:
+    # O login acontece apenas dentro desta coluna central
+    login_result = auth.login(location="main", fields={"Form name": "Login"})
 
 if isinstance(login_result, tuple):
     name, auth_status, username = login_result
@@ -158,19 +166,21 @@ else:
     auth_status = st.session_state.get("authentication_status")
     username = st.session_state.get("username")
 
-# Verifica status e interrompe se não logado
 if not auth_status:
     if auth_status is False:
-        st.error("Usuário ou senha incorretos.")
-    # Se None (esperando input) ou False (erro), para a execução aqui.
+        # Mostra erro dentro da coluna central também, para ficar alinhado
+        with col_centro:
+            st.error("Usuário ou senha incorretos.")
     st.stop()
 
-# --- SE CHEGOU AQUI, O USUÁRIO ESTÁ LOGADO ---
+# =============================================================================
+# LOGADO - Conteúdo Principal
+# =============================================================================
 
-# Monta a sidebar com as informações do usuário logado
+# Monta a sidebar com dados do usuário (que agora está oculta por padrão)
 with st.sidebar:
-    st.title("Acesso")
-    st.success(f"Logado como: {name}")
+    st.header("Perfil")
+    st.success(f"Olá, **{name}**")
     auth.logout(button_name="Sair", location="sidebar", key="logout_sidebar")
     st.divider()
 
@@ -186,10 +196,8 @@ is_admin = ("*" in allowed_uos_list)
 allowed_uos = None if is_admin else set(map(int, allowed_uos_list))
 
 working_uo = None
-
-# Monta seletor de UO na sidebar (dentro do fluxo logado)
 if is_admin:
-    st.sidebar.info("Perfil: **Administrador**")
+    st.sidebar.info("Nível: **Administrador**")
 else:
     if not allowed_uos:
         st.error("Seu usuário não possui UOs vinculadas.")
