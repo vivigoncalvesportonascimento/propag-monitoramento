@@ -3,14 +3,13 @@
 """
 Propag - Monitoramento do Plano de Aplicação de Investimentos
 
-Este app:
-1) Autentica usuários.
-2) Layout ajustado (Sidebar retrátil, Login centralizado).
-3) Melhorias para o cronograma:
-   - Colunas *_bimestre_planejado passam a usar lógica "X" (planejado) e "" (não planejado),
-     SEM criar colunas novas e mantendo 3 colunas por bimestre (planejado, replanejado, realizado).
-   - Visualização: exibe "X" e pode colorir de verde as células com "X".
-   - Edição: digite "X" ou deixe vazio nas mesmas colunas.
+Ajustes:
+- Rótulos de colunas conforme especificação da Vivi (DISPLAY_LABELS).
+- 'intervencao_cod' oculto na tabela.
+- *_bimestre_planejado: somente leitura, exibem "X" e podem ser coloridas.
+- Só edita *_bimestre_replanejado e *_bimestre_realizado.
+- Sem inclusão de novas linhas nesta tabela.
+- Visualização com “X” + destaque verde também quando aplicar filtros.
 """
 
 from __future__ import annotations
@@ -24,8 +23,7 @@ from yaml.loader import SafeLoader
 from streamlit_gsheets import GSheetsConnection
 import streamlit_authenticator as stauth
 
-# -- Imports dos módulos locais (conforme seu projeto) --
-# (Baseado nos arquivos que você enviou)  [1](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/Documents/Arquivos%20de%20Microsoft%20Copilot%20Chat/app.py)
+# ====== Módulos do projeto (como no seu ambiente) ======
 try:
     from my_pkg.transform.metrics import load_metrics
     from my_pkg.transform.execucao_view import load_execucao_view
@@ -46,6 +44,43 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+# =============================================================================
+# Rótulos de exibição (exatos como solicitado)
+# =============================================================================
+DISPLAY_LABELS = {
+    "uo_cod": "UO",
+    "uo_sigla": "UO Sigla",
+    "acao_cod": "Ação",
+    "acao_desc": "Ação Desc.",
+    # "intervencao_cod": oculto
+    "intervencao_desc": "Intervenção",
+    "marcos_principais": "Marcos Principais",
+    "novo_marco": "Novo Marco ?",
+    "valor_previsto_total": "Valor Plano Total",
+    "valor_replanejado_total": "Valor Plano Replanejado",
+    "1_bimestre_planejado": "1ºb Plano",
+    "1_bimestre_replanejado": "1ºb Replanejado",
+    "1_bimestre_realizado": "1ºb Realizado",
+    "2_bimestre_planejado": "2ºb Plano",
+    "2_bimestre_replanejado": "2ºb Replanejado",
+    "2_bimestre_realizado": "2ºb Realizado",
+    "3_bimestre_planejado": "3ºb Plano",
+    "3_bimestre_replanejado": "3ºb Replanejado",
+    "3_bimestre_realizado": "3ºb Realizado",
+    "4_bimestre_planejado": "4ºb Plano",
+    "4_bimestre_replanejado": "4ºb Replanejado",
+    "4_bimestre_realizado": "4ºb Realizado",
+    "5_bimestre_planejado": "5ºb Plano",
+    "5_bimestre_replanejado": "5ºb Replanejado",
+    "5_bimestre_realizado": "5ºb Realizado",
+    "6_bimestre_planejado": "6ºb Plano",
+    "6_bimestre_replanejado": "6ºb Replanejado",
+    "6_bimestre_realizado": "6ºb Realizado",
+}
+
+PLANEJADO_KEYS = [f"{i}_bimestre_planejado" for i in range(1, 7)]
+PLANEJADO_LABELS = [DISPLAY_LABELS[k] for k in PLANEJADO_KEYS]
 
 # =============================================================================
 # Funções Utilitárias
@@ -114,48 +149,40 @@ def load_access_yaml(path: str = "security/access_control.yaml") -> dict[str, li
     except FileNotFoundError:
         return {}
 
-
 # --------------------------- NORMALIZAÇÃO ---------------------------
+
+
 def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Normaliza dados brutos:
     - Garante ALL_COLS.
-    - Converte NUMERIC_COLS para float.
-    - Para *_bimestre_planejado: força a lógica "X" (planejado) e "" (não planejado),
-      aceitando variações como TRUE/1/SIM/V/OK e mapeando para "X".
-    - Para os demais BOOL_COLS (ex.: novo_marco): mantém bool robusto.
+    - NUMERIC_COLS -> float.
+    - *_bimestre_planejado => "X" (planejado) / "" (não planejado) aceitando TRUE/1/SIM/V/OK.
+    - Demais BOOL_COLS (ex.: novo_marco) -> bool.
     """
     data = df.copy()
 
-    # 1) Garante todas as colunas
     for c in ALL_COLS:
         if c not in data.columns:
             data[c] = None
 
-    # 2) Numéricos
     for col in NUMERIC_COLS:
         if col in data.columns:
             if data[col].dtype == object:
                 data[col] = (
-                    data[col]
-                    .astype(str)
+                    data[col].astype(str)
                     .str.replace(r"\[R$\.\s\]", "", regex=True)
                     .str.replace(",", ".")
                 )
             data[col] = pd.to_numeric(data[col], errors="coerce").fillna(0.0)
 
-    # 3) Planejado como "X"/""
-    planejado_cols = [f"{i}_bimestre_planejado" for i in range(1, 7)]
+    # Planejado como "X"/""
     TRUE_TOKENS = {"TRUE", "TRUE()", "1", "SIM", "S", "YES",
                    "VERDADEIRO", "X", "OK", "V"}
-
-    for col in planejado_cols:
+    for col in PLANEJADO_KEYS:
         if col in data.columns:
             s = data[col]
-            # se for bool, mapeia diretamente
             if s.dtype == bool:
                 data[col] = s.map(lambda v: "X" if bool(v) else "")
-            # se for numérico, qualquer != 0 vira "X"
             elif pd.api.types.is_numeric_dtype(s):
                 data[col] = (pd.to_numeric(s, errors="coerce").fillna(
                     0) != 0).map(lambda v: "X" if v else "")
@@ -163,8 +190,8 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 up = s.astype(str).str.strip().str.upper()
                 data[col] = up.map(lambda t: "X" if t in TRUE_TOKENS else "")
 
-    # 4) Demais booleanos do schema (exclui *_planejado para não sobrescrever)
-    other_bool_cols = list(set(BOOL_COLS) - set(planejado_cols))
+    # Outros booleanos
+    other_bool_cols = list(set(BOOL_COLS) - set(PLANEJADO_KEYS))
     TRUE_VALUES_BOOL = {"TRUE", "TRUE()", "1", "SIM", "S",
                         "YES", "VERDADEIRO", "X", "OK", "V"}
     for col in other_bool_cols:
@@ -181,38 +208,17 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     return data[ALL_COLS]
 
+# ====== Validação (sem novas linhas) ======
 
-def validate_new_rows(df_before, df_after, allowed_uos, is_admin, working_uo):
+
+def validate_no_new_rows(df_before, df_after) -> tuple[bool, str, pd.DataFrame]:
+    """Bloqueia inclusão de novas linhas."""
     cols_key = ["uo_cod", "acao_cod", "intervencao_cod", "marcos_principais"]
     before_idx = set(map(tuple, df_before[cols_key].astype(str).values))
     after_idx = set(map(tuple, df_after[cols_key].astype(str).values))
     new_keys = after_idx - before_idx
-    is_new = df_after.apply(lambda r: tuple(
-        r[cols_key].astype(str)) in new_keys, axis=1)
-    new_rows = df_after[is_new].copy()
-
-    if not new_rows.empty:
-        if (
-            new_rows[REQUIRED_ON_NEW].isnull().any(axis=1).any()
-            or (new_rows[REQUIRED_ON_NEW] == "").any(axis=1).any()
-        ):
-            return False, "Preencha todos os campos obrigatórios na nova linha.", df_after
-        df_after.loc[is_new, "novo_marco"] = True
-
-    if not is_admin:
-        if df_after["uo_cod"].isnull().any():
-            return False, "Existem linhas sem UO definida.", df_after
-
-        uos_present = set(
-            pd.to_numeric(
-                df_after["uo_cod"], errors="coerce").fillna(-1).astype(int).tolist()
-        )
-        if allowed_uos is None or not uos_present.issubset(set(allowed_uos)):
-            return False, "Você inseriu uma UO não autorizada.", df_after
-
-        if working_uo is not None and (uos_present - {working_uo}):
-            return False, f"As linhas devem pertencer à UO {working_uo}.", df_after
-
+    if new_keys:
+        return False, "Inclusão de novas intervenções/marcos está desabilitada nesta tabela.", df_after
     return True, "", df_after
 
 
@@ -232,7 +238,7 @@ auth = stauth.Authenticate(
     cookie_expiry_days=int(auth_cfg.get("cookie_expiry_days", 1)),
 )
 
-# --- LOGIN ---
+# --- Login ---
 col_esq, col_centro, col_dir = st.columns([3, 2, 3])
 with col_centro:
     login_result = auth.login(location="main", fields={"Form name": "Login"})
@@ -251,14 +257,45 @@ if not auth_status:
     st.stop()
 
 # =============================================================================
-# LOGADO - Principal
+# Cabeçalho e Métricas
 # =============================================================================
-with st.sidebar:
-    st.header("Perfil")
-    st.success(f"Olá, **{name}**")
-    auth.logout(button_name="Sair", location="sidebar", key="logout_sidebar")
-    st.divider()
+st.title("Propag - Monitoramento de Investimentos")
+try:
+    vlr_plano, vlr_liq, saldo = load_metrics()
+except Exception as e:
+    st.error(f"Erro ao carregar métricas: {e}")
+    vlr_plano, vlr_liq, saldo = 0.0, 0.0, 0.0
 
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.metric("Valor Total do Plano", brl(vlr_plano))
+with c2:
+    st.metric("Valor Total Liquidado", brl(vlr_liq))
+with c3:
+    st.metric("Saldo a Liquidar", brl(saldo))
+st.divider()
+
+# =============================================================================
+# Cronograma Físico
+# =============================================================================
+conn = st.connection("gsheets", type=GSheetsConnection)
+ss_cfg = st.secrets.get("connections", {}).get("gsheets", {})
+spreadsheet = str(ss_cfg.get("spreadsheet", "")
+                  or st.sidebar.text_input("ID Planilha Google"))
+worksheet = str(ss_cfg.get("worksheet", "Página1"))
+
+
+def style_planejado_x(df: pd.DataFrame, planejado_colnames: list[str]) -> pd.io.formats.style.Styler:
+    styles = pd.DataFrame("", index=df.index, columns=df.columns)
+    for c in planejado_colnames:
+        if c in df.columns:
+            styles[c] = np.where(df[c].astype(str).str.strip().str.upper() == "X",
+                                 "background-color: #DFF6DD", "")
+    return df.style.apply(lambda _: styles, axis=None)
+
+
+# ---- Sidebar (RBAC) ----
+with st.sidebar:
     rbac_secrets = load_rbac_from_secrets()
     rbac_yaml = load_access_yaml()
     allowed_uos_list = rbac_secrets.get(
@@ -266,7 +303,6 @@ with st.sidebar:
     is_admin = ("*" in allowed_uos_list)
     allowed_uos = None if is_admin else set(map(int, allowed_uos_list))
     working_uo = None
-
     if is_admin:
         st.sidebar.info("Nível: **Administrador**")
     else:
@@ -280,59 +316,13 @@ with st.sidebar:
             working_uo = list(allowed_uos)[0]
         st.sidebar.info(f"UO Vinculada: {working_uo}")
 
-# =============================================================================
-# 1. Métricas
-# =============================================================================
-try:
-    vlr_plano, vlr_liq, saldo = load_metrics()
-except Exception as e:
-    st.error(f"Erro ao carregar métricas: {e}")
-    vlr_plano, vlr_liq, saldo = 0.0, 0.0, 0.0
-
-st.title("Propag - Monitoramento de Investimentos")
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.metric("Valor Total do Plano", brl(vlr_plano))
-with c2:
-    st.metric("Valor Total Liquidado", brl(vlr_liq))
-with c3:
-    st.metric("Saldo a Liquidar", brl(saldo))
-
-st.divider()
-
-# =============================================================================
-# 2. Cronograma Físico
-# =============================================================================
-conn = st.connection("gsheets", type=GSheetsConnection)
-ss_cfg = st.secrets.get("connections", {}).get("gsheets", {})
-spreadsheet = str(ss_cfg.get("spreadsheet", "")
-                  or st.sidebar.text_input("ID Planilha Google"))
-# ajuste aqui se sua aba tiver outro nome
-worksheet = str(ss_cfg.get("worksheet", "Página1"))
-
-# Apenas VISUALIZAÇÃO: colorir "X"
-
-
-def style_planejado_x(df: pd.DataFrame) -> pd.io.formats.style.Styler:
-    styles = pd.DataFrame("", index=df.index, columns=df.columns)
-    for i in range(1, 7):
-        c = f"{i}_bimestre_planejado"
-        if c in df.columns:
-            styles[c] = np.where(df[c].astype(str).str.strip().str.upper() == "X",
-                                 "background-color: #DFF6DD", "")
-    return df.style.apply(lambda _: styles, axis=None)
-
-
 if not spreadsheet:
     st.warning("⚠️ Planilha não configurada nos secrets.")
 else:
     try:
-        # Para depuração imediata sem cache, troque ttl=5 por ttl=0 temporariamente.
         data_raw = conn.read(spreadsheet=spreadsheet,
                              worksheet=worksheet, ttl=5)
-
-        # Normaliza (garante *_planejado como "X" ou "")
-        # Mantém 3 colunas por bimestre  [1](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/Documents/Arquivos%20de%20Microsoft%20Copilot%20Chat/app.py)
+        # mapeia *_planejado para "X"/""  [1](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/Documents/Arquivos%20de%20Microsoft%20Copilot%20Chat/app.py)
         data = normalize_dataframe(data_raw)
 
         if not is_admin:
@@ -343,13 +333,12 @@ else:
 
         st.subheader("Cronograma de Intervenções")
 
-        # Filtros
+        # --- Filtros ---
         f1, f2, f3 = st.columns(3)
         with f1:
             lista_uos = ["Todas"] + \
                 sorted(data["uo_sigla"].dropna().unique().tolist())
             uo_sel = st.selectbox("Filtrar UO", lista_uos)
-
         df_view = data.copy()
         if uo_sel != "Todas":
             df_view = df_view[df_view["uo_sigla"] == uo_sel]
@@ -358,13 +347,12 @@ else:
             lista_acoes = ["Todas"] + \
                 sorted(df_view["acao_desc"].dropna().unique().tolist())
             acao_sel = st.selectbox("Filtrar Ação", lista_acoes)
-
         with f3:
             lista_interv = [
                 "Todas"] + sorted(df_view["intervencao_desc"].dropna().unique().tolist())
             interv_sel = st.selectbox("Filtrar Intervenção", lista_interv)
 
-        # Colunas monetárias como texto BR para exibir/editar
+        # --- Formatação monetária para display/edição ---
         money_cols = ["valor_previsto_total", "valor_replanejado_total"]
         for i in range(1, 7):
             money_cols += [f"{i}_bimestre_replanejado",
@@ -375,66 +363,72 @@ else:
             if col in df_display.columns:
                 df_display[col] = df_display[col].apply(format_brl_edit)
 
-        # --- CONFIGURAÇÃO DE COLUNAS (3 por bimestre, SEM colunas extras) ---
+        # --- Column Config com rótulos e intervenção_cod oculta ---
         base_column_config = {
-            "uo_cod": st.column_config.NumberColumn("UO", format="%d"),
-            "uo_sigla": st.column_config.TextColumn("UO Sigla"),
-            "acao_cod": st.column_config.NumberColumn("Ação", format="%d"),
-            "acao_desc": st.column_config.TextColumn("Ação Desc."),
-            "intervencao_cod": None,  # Oculto
-            "intervencao_desc": st.column_config.TextColumn("Intervenção"),
-            "marcos_principais": st.column_config.TextColumn("Marcos Principais"),
-            "novo_marco": st.column_config.CheckboxColumn("Novo Marco?", default=False),
-            "valor_previsto_total": st.column_config.TextColumn("Valor Plano Total", disabled=True),
-            "valor_replanejado_total": st.column_config.TextColumn("Valor Plano Replanejado"),
+            "uo_cod": st.column_config.NumberColumn(DISPLAY_LABELS["uo_cod"], format="%d"),
+            "uo_sigla": st.column_config.TextColumn(DISPLAY_LABELS["uo_sigla"]),
+            "acao_cod": st.column_config.NumberColumn(DISPLAY_LABELS["acao_cod"], format="%d"),
+            "acao_desc": st.column_config.TextColumn(DISPLAY_LABELS["acao_desc"]),
+            "intervencao_cod": None,  # oculto
+            "intervencao_desc": st.column_config.TextColumn(DISPLAY_LABELS["intervencao_desc"]),
+            "marcos_principais": st.column_config.TextColumn(DISPLAY_LABELS["marcos_principais"]),
+            "novo_marco": st.column_config.CheckboxColumn(DISPLAY_LABELS["novo_marco"], default=False, disabled=True),
+            "valor_previsto_total": st.column_config.TextColumn(DISPLAY_LABELS["valor_previsto_total"], disabled=True),
+            "valor_replanejado_total": st.column_config.TextColumn(DISPLAY_LABELS["valor_replanejado_total"]),
         }
         for i in range(1, 7):
             base_column_config[f"{i}_bimestre_planejado"] = st.column_config.TextColumn(
-                f"{i}ºb Plano",
-                help='Digite "X" para planejado ou deixe vazio.'
-            )
+                DISPLAY_LABELS[f"{i}_bimestre_planejado"])
             base_column_config[f"{i}_bimestre_replanejado"] = st.column_config.TextColumn(
-                f"{i}ºb Replanejado")
+                DISPLAY_LABELS[f"{i}_bimestre_replanejado"])
             base_column_config[f"{i}_bimestre_realizado"] = st.column_config.TextColumn(
-                f"{i}ºb Realizado")
+                DISPLAY_LABELS[f"{i}_bimestre_realizado"])
 
-        # ---------- VISUALIZAÇÃO (leitura) ----------
-        if acao_sel == "Todas" and interv_sel == "Todas":
-            colorir = st.toggle("Colorir células com 'X' (verde)", value=True)
-            view_df = df_display.copy()
+        # --- Controles de exibição/edição ---
+        st.markdown("#### Exibição / Edição")
+        editar = st.toggle(
+            "Editar dados (somente Replanejado/Realizado; sem inclusão de novas linhas)",
+            value=False,
+            help="Desligado = visualização com 'X' e destaque; Ligado = edição apenas dos campos replanejado/realizado."
+        )
+        colorir = st.toggle("Colorir células com 'X' (verde)", value=True)
+
+        # ===================== VISUALIZAÇÃO =====================
+        if not editar:
+            # Remove coluna oculta e renomeia colunas para os rótulos finais
+            view_df = df_display.drop(
+                columns=["intervencao_cod"], errors="ignore").copy()
+            view_df = view_df.rename(columns=DISPLAY_LABELS)
 
             if colorir:
-                styled = style_planejado_x(view_df)
+                styled = style_planejado_x(view_df, PLANEJADO_LABELS)
                 st.dataframe(styled, use_container_width=True, hide_index=True)
             else:
                 st.dataframe(
-                    view_df, use_container_width=True, hide_index=True, column_config=base_column_config
+                    view_df,
+                    use_container_width=True,
+                    hide_index=True
                 )
 
+        # ======================= EDIÇÃO =========================
         else:
-            # ---------- EDIÇÃO (digitar X/vazio) ----------
             df_edit = df_display.copy()
-            if acao_sel != "Todas":
-                df_edit = df_edit[df_edit["acao_desc"] == acao_sel]
-            if interv_sel != "Todas":
-                df_edit = df_edit[df_edit["intervencao_desc"] == interv_sel]
-
             st.caption(
-                'Modo de Edição: nas colunas "*_bimestre_planejado", digite "X" para planejado ou deixe vazio.')
+                "Edição: somente Replanejado/Realizado. Planejado é fixo (somente leitura).")
 
             edit_cfg = base_column_config.copy()
+            # UO editável apenas para admin
             edit_cfg["uo_cod"] = st.column_config.NumberColumn(
-                "UO", disabled=not is_admin, format="%d")
+                DISPLAY_LABELS["uo_cod"], disabled=not is_admin, format="%d")
 
-            if not is_admin and "uo_cod" in df_edit.columns:
-                df_edit["uo_cod"] = int(working_uo)
-
+            # Desabilita todas as colunas não editáveis + TODO planejad0
             cols_disabled = [c for c in ALL_COLS if (
                 c not in EDITABLE_COLS and c != "novo_marco")]
+            cols_disabled = list(set(cols_disabled).union(set(PLANEJADO_KEYS)))
 
             edited_df = st.data_editor(
                 df_edit,
-                num_rows="dynamic",
+                num_rows="fixed",  # 🔒 sem inclusão de novas linhas
                 use_container_width=True,
                 column_config=edit_cfg,
                 disabled=cols_disabled,
@@ -442,34 +436,26 @@ else:
             )
 
             if st.button("💾 Salvar Alterações", type="primary"):
-                # Converte texto BR -> float nas colunas monetárias
                 df_to_save = edited_df.copy()
                 for col in money_cols:
                     if col in df_to_save.columns:
                         df_to_save[col] = df_to_save[col].apply(parse_brl_edit)
 
-                # Sanitiza *_planejado para "X"/""
-                for i in range(1, 7):
-                    c = f"{i}_bimestre_planejado"
+                # Reforça *_planejado como "X"/"" (já está desabilitado, mas por segurança)
+                for c in PLANEJADO_KEYS:
                     if c in df_to_save.columns:
-                        df_to_save[c] = (
-                            df_to_save[c]
-                            .astype(str)
-                            .str.strip()
-                            .str.upper()
-                            .map(lambda t: "X" if t in {"X", "TRUE", "1", "SIM", "S", "YES", "VERDADEIRO", "OK", "V"} else "")
-                        )
+                        df_to_save[c] = df_to_save[c].astype(str).str.strip(
+                        ).str.upper().map(lambda t: "X" if t == "X" else "")
 
-                # Dataframe "antes", coerente com tipos/formatos
                 df_before_save = df_edit.copy()
                 for col in money_cols:
                     if col in df_before_save.columns:
                         df_before_save[col] = df_before_save[col].apply(
                             parse_brl_edit)
 
-                is_valid, msg, validated_df = validate_new_rows(
-                    df_before_save, df_to_save, allowed_uos, is_admin, working_uo
-                )
+                # 🔒 Bloqueia novas linhas
+                is_valid, msg, validated_df = validate_no_new_rows(
+                    df_before_save, df_to_save)
                 if not is_valid:
                     st.error(f"Erro: {msg}")
                 else:
@@ -493,7 +479,7 @@ else:
 st.divider()
 
 # =============================================================================
-# 3. Detalhamento Financeiro
+# 3. Detalhamento Financeiro (inalterado)
 # =============================================================================
 st.subheader("Detalhamento Financeiro")
 
@@ -503,7 +489,8 @@ view_option = st.radio(
     horizontal=True
 )
 
-restrict_uo_db = None if is_admin else int(working_uo)
+restrict_uo_db = None if 'working_uo' not in locals(
+) or working_uo is None else int(working_uo)
 
 if view_option == "Execução do Exercício (2026)":
     st.markdown("---")
