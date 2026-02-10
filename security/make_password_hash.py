@@ -3,7 +3,7 @@ import streamlit_authenticator as stauth
 
 # Substitua pelas senhas em claro apenas LOCALMENTE para gerar os hashes
 senhas = {
-    "admin":   "propag_seplag,
+    "admin":   "propag_seplag",
     "pmmg":    "propag_pmmg",
     "cbmmg":   "propag_cbmmg",
     "der":     "propag_der",
