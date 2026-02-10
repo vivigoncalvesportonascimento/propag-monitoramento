@@ -4,12 +4,11 @@
 Propag - Monitoramento do Plano de Aplicação de Investimentos
 
 Principais ajustes desta versão:
+- Layout Otimizado: Margens reduzidas para aproveitar a tela (CSS injetado).
 - Rótulos conforme especificado e 'intervencao_cod' oculto.
 - *_bimestre_planejado: somente leitura; exibem "X" e podem ser coloridas.
 - Editáveis apenas *_bimestre_replanejado e *_bimestre_realizado.
-- Sem inclusão de novas linhas nesta tabela; edição somente de linhas existentes (novo_marco == False).
-- Visualização com “X” + destaque verde também quando aplicar filtros.
-- uo_cod / acao_cod / intervencao_cod tratados como Int64 e formatados como inteiros na visualização com Styler.
+- Sem inclusão de novas linhas nesta tabela.
 """
 
 from __future__ import annotations
@@ -24,7 +23,6 @@ from streamlit_gsheets import GSheetsConnection
 import streamlit_authenticator as stauth
 
 # ====== Módulos do projeto (conforme seu ambiente) ======
-# Baseado no seu app original e estrutura da base. [1](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/Documents/Arquivos%20de%20Microsoft%20Copilot%20Chat/app.py)[2](https://cecad365-my.sharepoint.com/personal/m752868_ca_mg_gov_br/_layouts/15/Doc.aspx?sourcedoc=%7BE9CA3813-776A-4718-9945-36E0811F1A89%7D&file=propag_db.xlsx&action=default&mobileredirect=true)
 try:
     from my_pkg.transform.metrics import load_metrics
     from my_pkg.transform.execucao_view import load_execucao_view
@@ -45,6 +43,35 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+# =============================================================================
+# CSS PERSONALIZADO (Layout Compacto)
+# =============================================================================
+# Este bloco remove os espaços em branco excessivos do topo
+st.markdown("""
+    <style>
+        /* Reduz o padding do container principal */
+        .block-container {
+            padding-top: 1.5rem !important; /* Espaço suficiente para o menu, mas bem no topo */
+            padding-bottom: 1rem !important;
+            margin-top: 0rem !important;
+        }
+        
+        /* Ajusta o Título Principal (h1) para ocupar menos espaço vertical */
+        h1 {
+            font-size: 2.2rem !important; 
+            margin-bottom: 0.5rem !important; 
+            margin-top: 0rem !important; 
+            padding-top: 0rem !important;
+        }
+        
+        /* Reduz margens dos divisores */
+        hr {
+            margin-top: 0.5rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # =============================================================================
 # Rótulos de exibição
@@ -156,11 +183,7 @@ def load_access_yaml(path: str = "security/access_control.yaml") -> dict[str, li
 
 def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
-    - Garante ALL_COLS.
-    - NUMERIC_COLS -> float.
-    - *_bimestre_planejado => "X"/"" aceitando TRUE/1/SIM/V/OK.
-    - Demais BOOL_COLS (ex.: novo_marco) -> bool.
-    - uo_cod / acao_cod / intervencao_cod -> Int64 (inteiros com nulo seguro).
+    Normaliza dados para tipos corretos.
     """
     data = df.copy()
 
@@ -249,7 +272,8 @@ auth = stauth.Authenticate(
     cookie_expiry_days=int(auth_cfg.get("cookie_expiry_days", 1)),
 )
 
-# --- Login ---
+# --- Login Centralizado ---
+# Ajuste de layout para centralizar o box de login
 col_esq, col_centro, col_dir = st.columns([3, 2, 3])
 with col_centro:
     login_result = auth.login(location="main", fields={"Form name": "Login"})
@@ -316,7 +340,6 @@ def style_view(df_labels: pd.DataFrame, planejado_labels: list[str], code_labels
         try:
             return f"{int(float(v))}"
         except Exception:
-            # se vier string não numérica, mantém
             return str(v)
 
     fmt_map = {lbl: fmt_int for lbl in code_labels if lbl in df_labels.columns}
@@ -328,6 +351,11 @@ def style_view(df_labels: pd.DataFrame, planejado_labels: list[str], code_labels
 
 # ---- Sidebar (RBAC) ----
 with st.sidebar:
+    st.header("Perfil")
+    st.success(f"Logado como: **{name}**")
+    auth.logout(button_name="Sair", location="sidebar", key="logout_sidebar")
+    st.divider()
+
     rbac_secrets = load_rbac_from_secrets()
     rbac_yaml = load_access_yaml()
     allowed_uos_list = rbac_secrets.get(
@@ -688,7 +716,10 @@ else:
         if use_brl_rp:
             for lbl in sel_meas_rp_labels:
                 if lbl in display_df_rp.columns:
-                    display_df_rp[lbl] = display_df_rp[lbl].apply(brl)
+                    display_df_rp[lbl] = display_df_rp[lbl].apply(
+                        lambda x: f"R$ {x:,.2f}".replace(
+                            ",", "X").replace(".", ",").replace("X", ".")
+                    )
 
         st.dataframe(
             display_df_rp,
